@@ -229,7 +229,7 @@ def write_csv(standings: List[Dict[str, any]], output_path: str, include_omw: bo
 
     try:
         with open(output_path, 'w', newline='') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames, quoting=csv.QUOTE_NONNUMERIC)
             writer.writeheader()
 
             for entry in standings:
