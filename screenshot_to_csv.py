@@ -25,6 +25,20 @@ except ImportError:
     sys.exit(1)
 
 
+def clean_name(name: str) -> str:
+    """
+    Clean player name by removing emojis and non-alphabetic characters.
+    Keeps spaces and hyphens/apostrophes common in names.
+    """
+    # Remove emojis and non-ASCII characters
+    cleaned = name.encode('ascii', 'ignore').decode('ascii')
+    # Keep only letters, spaces, hyphens, and apostrophes
+    cleaned = re.sub(r"[^a-zA-Z\s\-']", '', cleaned)
+    # Collapse multiple spaces into one
+    cleaned = re.sub(r'\s+', ' ', cleaned)
+    return cleaned.strip()
+
+
 def calculate_points(record: str) -> int:
     """
     Calculate points from a W-L-D record.
@@ -117,6 +131,8 @@ def parse_standings(text: str) -> List[Dict[str, any]]:
                 name_parts = parts[idx:record_idx]
 
             name = ' '.join(name_parts)
+            # Clean the name to remove emojis and non-alphabetic characters
+            name = clean_name(name)
 
             # If no explicit points found, calculate from record
             if points is None:
@@ -186,7 +202,7 @@ def parse_date_string(date_str: str) -> datetime:
 def merge_standings(*files_list) -> List[Dict[str, any]]:
     """
     Merge standings from multiple sources, removing duplicates by name.
-    Latest entry for each name is kept.
+    Entry with the best record (highest points) is kept.
     """
     seen_names = {}
 
@@ -194,7 +210,9 @@ def merge_standings(*files_list) -> List[Dict[str, any]]:
         if isinstance(file_data, list):
             for entry in file_data:
                 name = entry['name'].lower()
-                seen_names[name] = entry
+                # Keep the entry with the higher points
+                if name not in seen_names or entry['points'] > seen_names[name]['points']:
+                    seen_names[name] = entry
 
     return list(seen_names.values())
 
