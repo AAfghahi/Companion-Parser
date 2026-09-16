@@ -218,21 +218,16 @@
             }
 
             const weekFilter = document.getElementById('weekFilter').value;
-            const storeFilter = document.getElementById('storeFilter').value;
 
             let filteredRows = rows.slice(1).map((row, idx) => ({
                 name: row[0] || '',
                 record: row[1] || '',
                 points: parseInt(row[2]) || 0,
-                week: row[3] || '',
-                store: row[4] || ''
+                week: row[3] || ''
             }));
 
             if (weekFilter) {
                 filteredRows = filteredRows.filter(r => r.week === weekFilter);
-            }
-            if (storeFilter) {
-                filteredRows = filteredRows.filter(r => r.store === storeFilter);
             }
 
             filteredRows.sort((a, b) => b.points - a.points);
@@ -245,7 +240,6 @@
                     <td>${row.record}</td>
                     <td><strong>${row.points}</strong></td>
                     <td>${row.week}</td>
-                    <td>${row.store}</td>
                 </tr>
             `).join('');
 
@@ -284,39 +278,27 @@
 
         function populateFilters(rows) {
             const weeks = new Set(rows.slice(1).map(r => r[3]).filter(Boolean));
-            const stores = new Set(rows.slice(1).map(r => r[4]).filter(Boolean));
 
             const weekSelect = document.getElementById('weekFilter');
             const currentWeek = weekSelect.value;
-            weekSelect.innerHTML = '<option value="">All Weeks</option>' + 
-                Array.from(weeks).sort().reverse().map(w => 
+            weekSelect.innerHTML = '<option value="">All Weeks</option>' +
+                Array.from(weeks).sort().reverse().map(w =>
                     `<option value="${w}">${w}</option>`
                 ).join('');
             weekSelect.value = currentWeek;
-
-            const storeSelect = document.getElementById('storeFilter');
-            const currentStore = storeSelect.value;
-            storeSelect.innerHTML = '<option value="">All Stores</option>' + 
-                Array.from(stores).sort().map(s => 
-                    `<option value="${s}">${s}</option>`
-                ).join('');
-            storeSelect.value = currentStore;
         }
 
         function updateStatistics(rows) {
             const dataRows = rows.slice(1);
             const uniquePlayers = new Set(dataRows.map(r => r[0])).size;
             const weeks = new Set(dataRows.map(r => r[3])).size;
-            const stores = new Set(dataRows.map(r => r[4])).size;
 
             document.getElementById('totalEntries').textContent = dataRows.length;
             document.getElementById('uniquePlayers').textContent = uniquePlayers;
             document.getElementById('weeksTracked').textContent = weeks;
-            document.getElementById('storesTracked').textContent = stores;
         }
 
         document.getElementById('weekFilter').addEventListener('change', () => loadData());
-        document.getElementById('storeFilter').addEventListener('change', () => loadData());
 
         window.addEventListener('load', () => {
             loadData();
