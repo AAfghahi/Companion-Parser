@@ -124,6 +124,38 @@ python screenshot_to_csv.py round1.png round2.png round3.png \
 1. Click **Download JSON** to save data
 2. Use for backups or further processing
 
+
+## Step 5: Cloud Sync & Backup
+
+### Backup Codes
+
+1. Go to **Cloud Sync** tab
+2. Click **Generate Backup Code**
+3. Copy the displayed code
+4. Save it somewhere safe (email, document, etc.)
+5. To restore: paste the code into **Restore from Backup Code** and click **Restore**
+
+### Auto Backups
+
+1. The tracker automatically saves snapshots every time you import data
+2. View your backup history in the **Cloud Sync** tab
+3. Click **Restore** next to any backup to recover that data
+
+### Google Sheets Integration
+
+1. Go to **Cloud Sync** tab
+2. Click **Export to Google Sheets** 
+3. A CSV download will be ready
+4. Import manually into Google Sheets for shared access
+
+### Cloud URL Import
+
+1. If data is hosted online (Google Drive, GitHub Gist, etc.)
+2. Go to **Cloud Sync** tab
+3. Paste the public URL into **Import from Cloud URL**
+4. Click **Import**
+
+
 ## Recurring Weekly Workflow
 
 ### Monday (After Tournament)
