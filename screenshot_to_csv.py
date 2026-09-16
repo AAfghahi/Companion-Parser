@@ -201,7 +201,7 @@ def parse_date_string(date_str: str) -> datetime:
 def merge_standings(*files_list) -> List[Dict[str, any]]:
     """
     Merge standings from multiple sources, removing duplicates by name.
-    Latest entry for each name is kept.
+    Entry with the best record (highest points) is kept.
     """
     seen_names = {}
 
@@ -209,7 +209,9 @@ def merge_standings(*files_list) -> List[Dict[str, any]]:
         if isinstance(file_data, list):
             for entry in file_data:
                 name = entry['name'].lower()
-                seen_names[name] = entry
+                # Keep the entry with the higher points
+                if name not in seen_names or entry['points'] > seen_names[name]['points']:
+                    seen_names[name] = entry
 
     return list(seen_names.values())
 
