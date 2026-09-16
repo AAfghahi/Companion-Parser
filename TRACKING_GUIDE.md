@@ -124,6 +124,7 @@ python screenshot_to_csv.py round1.png round2.png round3.png \
 1. Click **Download JSON** to save data
 2. Use for backups or further processing
 
+
 ## Step 5: Cloud Sync & Backup
 
 ### Backup Codes
@@ -153,6 +154,7 @@ python screenshot_to_csv.py round1.png round2.png round3.png \
 2. Go to **Cloud Sync** tab
 3. Paste the public URL into **Import from Cloud URL**
 4. Click **Import**
+
 
 ## Recurring Weekly Workflow
 
