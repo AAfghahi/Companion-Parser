@@ -301,7 +301,7 @@ Examples:
     parser.add_argument(
         '--omw',
         action='store_true',
-        help='Include OMW% column in output'
+        help='Include OMW%% column in output'
     )
 
     args = parser.parse_args()
