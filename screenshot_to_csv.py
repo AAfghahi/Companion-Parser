@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Sports Standings Screenshot to CSV Converter
+Magic: The Gathering Tournament Standings Screenshot to CSV Converter
 
-Converts sports standings screenshots to CSV format with automatic point calculation.
-Supports Win/Loss/Draw records and week tracking.
+Converts Magic: The Gathering tournament standings screenshots to CSV format
+with automatic match point calculation. Supports Win/Loss/Draw records and round tracking.
 """
 
 import argparse
@@ -59,12 +59,11 @@ def extract_text_from_image(image_path: str) -> str:
 
 def parse_standings(text: str) -> List[Dict[str, any]]:
     """
-    Parse standings text from OCR.
+    Parse Magic: The Gathering tournament standings text from OCR.
 
     Expected format (from the screenshot):
     RANK NAME POINTS W-L-D OMW%
     1    Michael Ross  16    5-0-1  56.8%
-    etc.
     """
     lines = text.strip().split('\n')
     standings = []

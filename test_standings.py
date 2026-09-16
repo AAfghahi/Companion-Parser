@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Unit tests for screenshot_to_csv.py
+Unit tests for Magic: The Gathering tournament standings parser
 """
 
 import unittest
@@ -199,11 +199,10 @@ class TestParseStandings(unittest.TestCase):
 
 
 class TestExampleScenarios(unittest.TestCase):
-    """Test real-world scenarios"""
+    """Test real-world Magic: The Gathering tournament scenarios"""
 
     def test_week_5_standings(self):
-        """Test parsing the example from the issue"""
-        # This is the data visible in the screenshot
+        """Test parsing tournament standings from round 5"""
         text = """
         RANK NAME POINTS W-L-D OMW%
         1 Michael Ross 16 5-0-1 56.8%
