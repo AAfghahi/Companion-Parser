@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MTG Tournament Tracker</title>
+    <title>MTG Tournament Tracker - Google Sheets</title>
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
     <style>
         * {
             margin: 0;
@@ -51,6 +53,9 @@
             margin-bottom: 30px;
             border-bottom: 2px solid var(--border);
             padding-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         h1 {
@@ -61,6 +66,31 @@
         .subtitle {
             color: var(--text-secondary);
             font-size: 0.95em;
+        }
+
+        .auth-section {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .auth-button {
+            padding: 8px 16px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .auth-button:hover {
+            opacity: 0.9;
+        }
+
+        .auth-status {
+            font-size: 0.9em;
+            color: var(--text-secondary);
         }
 
         .tabs {
@@ -142,6 +172,12 @@
 
         button:hover {
             opacity: 0.9;
+        }
+
+        button.secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
         }
 
         .table-container {
@@ -230,50 +266,38 @@
             border: 1px solid #93c5fd;
         }
 
-        .setup-guide {
-            background: var(--bg-secondary);
-            padding: 20px;
-            border-radius: 8px;
-            border-left: 4px solid var(--warning);
-            margin-bottom: 20px;
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
         }
 
-        .setup-guide h3 {
-            color: var(--warning);
-            margin-bottom: 10px;
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
         }
 
-        .setup-guide ol {
-            margin-left: 20px;
-        }
-
-        .setup-guide li {
-            margin-bottom: 10px;
-        }
-
-        .setup-guide code {
-            background: var(--bg-primary);
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-family: monospace;
-            font-size: 0.9em;
-        }
-
-        a {
-            color: var(--accent);
-            text-decoration: none;
-        }
-
-        a:hover {
-            text-decoration: underline;
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🧙‍♂️ MTG Tournament Tracker</h1>
-            <p class="subtitle">Magic: The Gathering standings powered by Google Sheets</p>
+            <div>
+                <h1>🧙‍♂️ MTG Tournament Tracker</h1>
+                <p class="subtitle">Magic: The Gathering standings powered by Google Sheets</p>
+            </div>
+            <div class="auth-section">
+                <button id="authButton" class="auth-button">Sign in with Google</button>
+                <button id="logoutButton" class="auth-button" style="display:none; background: var(--danger);">Logout</button>
+                <span id="authStatus" class="auth-status">Not signed in</span>
+            </div>
         </header>
 
         <div id="messageArea"></div>
@@ -337,7 +361,7 @@
         <div id="import" class="tab-content">
             <h2>Import Tournament Data</h2>
             <p style="margin: 20px 0; color: var(--text-secondary);">
-                Import standings from CSV or JSON format. Data will be automatically synced to your Google Sheet.
+                Import standings from CSV or JSON format. Data will be automatically synced to Google Sheets.
             </p>
 
             <div class="form-group">
@@ -387,6 +411,7 @@
             <div class="form-group">
                 <button onclick="exportAsCSV()">📥 Download as CSV</button>
                 <button onclick="exportAsJSON()">📥 Download as JSON</button>
+                <button onclick="openGoogleSheet()" class="secondary">🔗 Open Google Sheet</button>
             </div>
 
             <h3 style="margin-top: 30px;">Formatted Table (for Google Docs)</h3>
@@ -399,30 +424,14 @@
         <!-- Settings Tab -->
         <div id="settings" class="tab-content">
             <h2>Settings</h2>
-            
-            <div class="setup-guide">
-                <h3>📝 Setup Google Apps Script (One-time setup)</h3>
-                <p style="margin-bottom: 15px;">To sync with Google Sheets, you need to create a Google Apps Script deployment:</p>
-                <ol>
-                    <li>Go to <a href="https://script.google.com" target="_blank">script.google.com</a></li>
-                    <li>Click "New project"</li>
-                    <li>Copy the code from <code>mtg_tracker_apps_script.gs</code> file in the repository</li>
-                    <li>Paste it into the script editor</li>
-                    <li>Click "Deploy" → "New deployment" → Type: "Web app"</li>
-                    <li>Set "Execute as" to your account</li>
-                    <li>Set "Who has access" to "Anyone"</li>
-                    <li>Click Deploy and copy the deployment URL</li>
-                    <li>Paste the URL in the field below</li>
-                </ol>
+
+            <div class="stat-card">
+                <div class="stat-label">Google Sheet ID</div>
+                <div id="sheetIdDisplay" style="font-family: monospace; word-break: break-all; margin-top: 10px;"></div>
+                <button onclick="copySheetId()" style="margin-top: 10px;">📋 Copy Sheet URL</button>
             </div>
 
-            <div class="form-group">
-                <label for="scriptUrl">Google Apps Script Deployment URL:</label>
-                <input type="text" id="scriptUrl" placeholder="https://script.googleapis.com/macros/d/..." value="">
-                <button onclick="saveScriptUrl()">Save URL</button>
-            </div>
-
-            <div class="stat-card" style="margin-top: 30px;">
+            <div class="stat-card">
                 <div class="stat-label">Data Statistics</div>
                 <div style="margin-top: 10px;">
                     <p>Total Entries: <span id="totalEntries">0</span></p>
@@ -431,53 +440,164 @@
                     <p>Stores: <span id="storesTracked">0</span></p>
                 </div>
             </div>
+
+            <div class="stat-card" style="border-left-color: var(--danger);">
+                <label for="newSheetInput">Create New Google Sheet:</label>
+                <input type="text" id="newSheetInput" placeholder="Enter new sheet name (optional)">
+                <button onclick="createNewSheet()" style="background: var(--warning); margin-top: 10px;">⚙️ Create New Sheet</button>
+            </div>
         </div>
     </div>
 
     <script>
-        let scriptUrl = localStorage.getItem('mtg_script_url') || '';
-        document.getElementById('scriptUrl').value = scriptUrl;
+        // Google Sheets API Configuration
+        const CONFIG = {
+            CLIENT_ID: 'YOUR_CLIENT_ID.apps.googleusercontent.com',
+            API_KEY: 'YOUR_API_KEY',
+            SCOPES: ['https://www.googleapis.com/auth/spreadsheets']
+        };
 
-        // Save Script URL
-        function saveScriptUrl() {
-            const url = document.getElementById('scriptUrl').value;
-            if (!url) {
-                showMessage('Please enter a URL', 'error');
-                return;
+        let tokenClient;
+        let gapiInited = false;
+        let gisInited = false;
+        let currentSheetId = localStorage.getItem('mtg_sheet_id');
+
+        // Initialize Google API
+        async function initializeGoogleAPI() {
+            try {
+                await new Promise((resolve) => {
+                    gapi.load('client', resolve);
+                });
+
+                await gapi.client.init({
+                    apiKey: CONFIG.API_KEY,
+                    discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
+                });
+                gapiInited = true;
+            } catch (error) {
+                console.error('Error initializing Google API:', error);
+                showMessage('Error initializing Google Sheets. Please check your API configuration.', 'error');
             }
-            localStorage.setItem('mtg_script_url', url);
-            showMessage('Script URL saved!', 'success');
-            loadData();
         }
 
-        // Load Data
+        // Initialize Google Sign-In
+        function initializeGoogleSignIn() {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CONFIG.CLIENT_ID,
+                scope: CONFIG.SCOPES.join(' '),
+                callback: handleAuthResponse,
+            });
+            gisInited = true;
+            updateAuthUI();
+        }
+
+        // Handle Auth Response
+        function handleAuthResponse(response) {
+            if (response.access_token) {
+                gapi.client.setToken(response);
+                localStorage.setItem('mtg_access_token', response.access_token);
+                updateAuthUI();
+                loadData();
+            }
+        }
+
+        // Update Auth UI
+        function updateAuthUI() {
+            const token = gapi.client.getToken();
+            if (token) {
+                document.getElementById('authButton').style.display = 'none';
+                document.getElementById('logoutButton').style.display = 'inline-block';
+                document.getElementById('authStatus').textContent = 'Signed in to Google';
+            } else {
+                document.getElementById('authButton').style.display = 'inline-block';
+                document.getElementById('logoutButton').style.display = 'none';
+                document.getElementById('authStatus').textContent = 'Not signed in';
+            }
+        }
+
+        // Sign In Button
+        document.getElementById('authButton').addEventListener('click', () => {
+            if (gapi.client.getToken() === null) {
+                tokenClient.requestAccessToken({ prompt: 'consent' });
+            } else {
+                tokenClient.requestAccessToken({ prompt: '' });
+            }
+        });
+
+        // Logout Button
+        document.getElementById('logoutButton').addEventListener('click', () => {
+            gapi.client.setToken(null);
+            localStorage.removeItem('mtg_access_token');
+            localStorage.removeItem('mtg_sheet_id');
+            currentSheetId = null;
+            updateAuthUI();
+            showMessage('Logged out', 'info');
+        });
+
+        // Get or Create Sheet
+        async function getOrCreateSheet() {
+            if (!currentSheetId) {
+                try {
+                    const response = await gapi.client.sheets.spreadsheets.create({
+                        properties: {
+                            title: 'MTG Tournament Standings'
+                        }
+                    });
+                    currentSheetId = response.result.spreadsheetId;
+                    localStorage.setItem('mtg_sheet_id', currentSheetId);
+
+                    // Create headers
+                    await gapi.client.sheets.spreadsheets.values.update({
+                        spreadsheetId: currentSheetId,
+                        range: 'Sheet1!A1:F1',
+                        valueInputOption: 'RAW',
+                        resource: {
+                            values: [['Name', 'Record', 'Points', 'Week', 'Store', 'Timestamp']]
+                        }
+                    });
+
+                    showMessage('Google Sheet created: ' + currentSheetId, 'success');
+                } catch (error) {
+                    console.error('Error creating sheet:', error);
+                    showMessage('Error creating Google Sheet', 'error');
+                }
+            }
+            return currentSheetId;
+        }
+
+        // Load Data from Google Sheets
         async function loadData() {
-            const url = localStorage.getItem('mtg_script_url');
-            if (!url) {
-                document.querySelector('#leaderboard tbody').innerHTML = 
-                    '<tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">Please set up the Google Apps Script URL in Settings tab</td></tr>';
+            if (!gapi.client.getToken()) {
+                showMessage('Please sign in with Google', 'error');
                 return;
             }
 
             try {
-                const response = await fetch(url);
-                const rows = await response.json();
+                const sheetId = await getOrCreateSheet();
+                const response = await gapi.client.sheets.spreadsheets.values.get({
+                    spreadsheetId: sheetId,
+                    range: 'Sheet1'
+                });
+
+                const rows = response.result.values || [];
                 renderDashboard(rows);
                 populateFilters(rows);
                 populatePlayerList(rows);
                 updateStatistics(rows);
+                document.getElementById('sheetIdDisplay').innerHTML =
+                    `<a href="https://docs.google.com/spreadsheets/d/${sheetId}" target="_blank">${sheetId}</a>`;
             } catch (error) {
                 console.error('Error loading data:', error);
-                showMessage('Error loading data. Check your script URL.', 'error');
+                showMessage('Error loading data from Google Sheets', 'error');
             }
         }
 
         // Render Dashboard
         function renderDashboard(rows) {
             if (rows.length <= 1) {
-                document.querySelector('#leaderboard tbody').innerHTML = 
+                document.querySelector('#leaderboard tbody').innerHTML =
                     '<tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">No data yet. Import some tournament standings!</td></tr>';
-                document.querySelector('#topPerformers tbody').innerHTML = 
+                document.querySelector('#topPerformers tbody').innerHTML =
                     '<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">No data yet. Import some tournament standings!</td></tr>';
                 return;
             }
@@ -558,16 +678,16 @@
 
             const weekSelect = document.getElementById('weekFilter');
             const currentWeek = weekSelect.value;
-            weekSelect.innerHTML = '<option value="">All Weeks</option>' + 
-                Array.from(weeks).sort().reverse().map(w => 
+            weekSelect.innerHTML = '<option value="">All Weeks</option>' +
+                Array.from(weeks).sort().reverse().map(w =>
                     `<option value="${w}">${w}</option>`
                 ).join('');
             weekSelect.value = currentWeek;
 
             const storeSelect = document.getElementById('storeFilter');
             const currentStore = storeSelect.value;
-            storeSelect.innerHTML = '<option value="">All Stores</option>' + 
-                Array.from(stores).sort().map(s => 
+            storeSelect.innerHTML = '<option value="">All Stores</option>' +
+                Array.from(stores).sort().map(s =>
                     `<option value="${s}">${s}</option>`
                 ).join('');
             storeSelect.value = currentStore;
@@ -576,9 +696,9 @@
         // Populate Player List
         function populatePlayerList(rows) {
             const players = new Set(rows.slice(1).map(r => r[0]).filter(Boolean));
-            document.getElementById('playerSelect').innerHTML = 
-                '<option value="">-- Select a player --</option>' + 
-                Array.from(players).sort().map(p => 
+            document.getElementById('playerSelect').innerHTML =
+                '<option value="">-- Select a player --</option>' +
+                Array.from(players).sort().map(p =>
                     `<option value="${p}">${p}</option>`
                 ).join('');
         }
@@ -661,46 +781,53 @@
 
         // Append to Sheet
         async function appendToSheet(data) {
-            const url = localStorage.getItem('mtg_script_url');
-            if (!url) {
-                showMessage('Please set up the Google Apps Script URL first', 'error');
+            if (!gapi.client.getToken()) {
+                showMessage('Please sign in with Google', 'error');
                 return;
             }
 
             try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        action: 'append',
-                        data: data
-                    })
+                const sheetId = await getOrCreateSheet();
+                const rows = data.map(entry => [
+                    entry.name || '',
+                    entry.record || '',
+                    entry.points || 0,
+                    entry.week || '',
+                    entry.store || '',
+                    new Date().toISOString()
+                ]);
+
+                await gapi.client.sheets.spreadsheets.values.append({
+                    spreadsheetId: sheetId,
+                    range: 'Sheet1!A:F',
+                    valueInputOption: 'RAW',
+                    resource: { values: rows }
                 });
 
-                const result = await response.json();
-                if (result.success) {
-                    showMessage(result.message, 'success');
-                    await loadData();
-                } else {
-                    showMessage(result.message, 'error');
-                }
+                showMessage(`Imported ${rows.length} entries`, 'success');
+                await loadData();
             } catch (error) {
-                showMessage('Error importing data: ' + error.message, 'error');
+                console.error('Error appending data:', error);
+                showMessage('Error importing data', 'error');
             }
         }
 
         // Export as CSV
         async function exportAsCSV() {
-            const url = localStorage.getItem('mtg_script_url');
-            if (!url) {
+            if (!currentSheetId) {
                 showMessage('No data to export', 'error');
                 return;
             }
 
             try {
-                const response = await fetch(url);
-                const rows = await response.json();
+                const response = await gapi.client.sheets.spreadsheets.values.get({
+                    spreadsheetId: currentSheetId,
+                    range: 'Sheet1'
+                });
+
+                const rows = response.result.values || [];
                 const csv = rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
-                
+
                 const blob = new Blob([csv], { type: 'text/csv' });
                 downloadFile(blob, 'mtg_standings.csv');
             } catch (error) {
@@ -710,15 +837,18 @@
 
         // Export as JSON
         async function exportAsJSON() {
-            const url = localStorage.getItem('mtg_script_url');
-            if (!url) {
+            if (!currentSheetId) {
                 showMessage('No data to export', 'error');
                 return;
             }
 
             try {
-                const response = await fetch(url);
-                const rows = await response.json();
+                const response = await gapi.client.sheets.spreadsheets.values.get({
+                    spreadsheetId: currentSheetId,
+                    range: 'Sheet1'
+                });
+
+                const rows = response.result.values || [];
                 const headers = rows[0] || [];
                 const data = rows.slice(1).map(row => {
                     const obj = {};
@@ -735,21 +865,71 @@
 
         // Copy Formatted Table
         async function copyFormattedTable() {
-            const url = localStorage.getItem('mtg_script_url');
-            if (!url) {
+            if (!currentSheetId) {
                 showMessage('No data to copy', 'error');
                 return;
             }
 
             try {
-                const response = await fetch(url);
-                const rows = await response.json();
+                const response = await gapi.client.sheets.spreadsheets.values.get({
+                    spreadsheetId: currentSheetId,
+                    range: 'Sheet1'
+                });
+
+                const rows = response.result.values || [];
                 const text = rows.map(row => row.join('\t')).join('\n');
-                
+
                 await navigator.clipboard.writeText(text);
                 showMessage('Formatted table copied to clipboard', 'success');
             } catch (error) {
                 showMessage('Error copying table', 'error');
+            }
+        }
+
+        // Open Google Sheet
+        function openGoogleSheet() {
+            if (currentSheetId) {
+                window.open(`https://docs.google.com/spreadsheets/d/${currentSheetId}`, '_blank');
+            } else {
+                showMessage('No sheet created yet', 'error');
+            }
+        }
+
+        // Copy Sheet ID/URL
+        function copySheetId() {
+            if (currentSheetId) {
+                const url = `https://docs.google.com/spreadsheets/d/${currentSheetId}`;
+                navigator.clipboard.writeText(url);
+                showMessage('Sheet URL copied to clipboard', 'success');
+            }
+        }
+
+        // Create New Sheet
+        async function createNewSheet() {
+            const name = document.getElementById('newSheetInput').value || 'MTG Tournament Standings';
+
+            try {
+                const response = await gapi.client.sheets.spreadsheets.create({
+                    properties: { title: name }
+                });
+                currentSheetId = response.result.spreadsheetId;
+                localStorage.setItem('mtg_sheet_id', currentSheetId);
+
+                await gapi.client.sheets.spreadsheets.values.update({
+                    spreadsheetId: currentSheetId,
+                    range: 'Sheet1!A1:F1',
+                    valueInputOption: 'RAW',
+                    resource: {
+                        values: [['Name', 'Record', 'Points', 'Week', 'Store', 'Timestamp']]
+                    }
+                });
+
+                document.getElementById('newSheetInput').value = '';
+                showMessage('New sheet created: ' + currentSheetId, 'success');
+                await loadData();
+            } catch (error) {
+                console.error('Error creating sheet:', error);
+                showMessage('Error creating new sheet', 'error');
             }
         }
 
@@ -792,14 +972,15 @@
         // Player History
         document.getElementById('playerSelect').addEventListener('change', async () => {
             const player = document.getElementById('playerSelect').value;
-            if (!player) return;
-
-            const url = localStorage.getItem('mtg_script_url');
-            if (!url) return;
+            if (!player || !currentSheetId) return;
 
             try {
-                const response = await fetch(url);
-                const rows = await response.json();
+                const response = await gapi.client.sheets.spreadsheets.values.get({
+                    spreadsheetId: currentSheetId,
+                    range: 'Sheet1'
+                });
+
+                const rows = response.result.values || [];
                 const history = rows.slice(1)
                     .filter(row => row[0] === player)
                     .map(row => ({
@@ -823,19 +1004,19 @@
             }
         });
 
-        // Load data on page load
-        window.addEventListener('load', () => {
-            if (localStorage.getItem('mtg_script_url')) {
-                loadData();
+        // Initialize on page load
+        window.addEventListener('load', async () => {
+            await initializeGoogleAPI();
+            initializeGoogleSignIn();
+
+            // Restore token if exists
+            const savedToken = localStorage.getItem('mtg_access_token');
+            if (savedToken) {
+                gapi.client.setToken({ access_token: savedToken });
+                updateAuthUI();
+                await loadData();
             }
         });
-
-        // Refresh data every 30 seconds
-        setInterval(() => {
-            if (localStorage.getItem('mtg_script_url')) {
-                loadData();
-            }
-        }, 30000);
     </script>
 </body>
 </html>
