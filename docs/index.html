@@ -300,7 +300,7 @@
                     name,
                     total: stats.total,
                     count: stats.count,
-                    avg: (stats.total / stats.count).toFixed(1),
+                    avg: Math.round(stats.total / stats.count),
                     entries: stats.entries
                 }));
 
@@ -432,7 +432,7 @@
                     name,
                     total: stats.total,
                     count: stats.count,
-                    avg: (stats.total / stats.count).toFixed(1),
+                    avg: Math.round(stats.total / stats.count),
                     entries: stats.entries
                 }));
 
