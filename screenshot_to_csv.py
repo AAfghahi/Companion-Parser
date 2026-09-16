@@ -259,15 +259,67 @@ def write_json(standings: List[Dict[str, any]], output_path: str):
         print(f"Error writing JSON: {e}")
 
 
+def write_excel(standings: List[Dict[str, any]], output_path: str, include_omw: bool = False):
+    """Write standings to Excel file."""
+    if not standings:
+        print("No data to write")
+        return
+
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Standings"
+
+        # Define headers
+        headers = ['Name', 'Record', 'Week', 'Points']
+        if include_omw:
+            headers.append('OMW')
+
+        # Write headers
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col)
+            cell.value = header
+            cell.font = Font(bold=True)
+            cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        # Write data
+        for row_idx, entry in enumerate(standings, 2):
+            ws.cell(row=row_idx, column=1).value = entry.get('name', '')
+            ws.cell(row=row_idx, column=2).value = entry.get('record', '')
+            ws.cell(row=row_idx, column=3).value = entry.get('week', '')
+            ws.cell(row=row_idx, column=4).value = entry.get('points', 0)
+            if include_omw:
+                ws.cell(row=row_idx, column=5).value = entry.get('omw', '')
+
+        # Auto-adjust column widths
+        ws.column_dimensions['A'].width = 20
+        ws.column_dimensions['B'].width = 12
+        ws.column_dimensions['C'].width = 12
+        ws.column_dimensions['D'].width = 10
+        if include_omw:
+            ws.column_dimensions['E'].width = 10
+
+        wb.save(output_path)
+        print(f"Excel written to: {output_path}")
+        print(f"Total entries: {len(standings)}")
+    except Exception as e:
+        print(f"Error writing Excel: {e}")
+
+
 def main():
     parser = argparse.ArgumentParser(
-        description='Convert Magic: The Gathering tournament standings screenshots to CSV/JSON',
+        description='Convert Magic: The Gathering tournament standings screenshots to Excel/JSON',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='''
 Examples:
-  python screenshot_to_csv.py screenshot.png -o standings.csv
-  python screenshot_to_csv.py screenshot.png -d 9/14/26 -o week.csv -s "Store Name"
-  python screenshot_to_csv.py img1.png img2.png -o merged.csv --json standings.json
+  python screenshot_to_csv.py screenshot.png -o standings.xlsx
+  python screenshot_to_csv.py screenshot.png -d 9/14/26 -o week.xlsx -s "Store Name"
+  python screenshot_to_csv.py img1.png img2.png -o merged.xlsx --json standings.json
         '''
     )
 
@@ -279,8 +331,8 @@ Examples:
 
     parser.add_argument(
         '-o', '--output',
-        help='Output CSV file path (default: standings.csv)',
-        default='standings.csv'
+        help='Output Excel file path (default: standings.xlsx)',
+        default='standings.xlsx'
     )
 
     parser.add_argument(
@@ -322,8 +374,8 @@ Examples:
         for entry in all_standings:
             entry['store'] = args.store
 
-    # Write CSV
-    write_csv(all_standings, args.output, include_omw=args.omw)
+    # Write Excel (main output format)
+    write_excel(all_standings, args.output, include_omw=args.omw)
 
     # Write JSON if requested
     if args.json:
