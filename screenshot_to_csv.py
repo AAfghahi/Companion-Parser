@@ -11,7 +11,7 @@ import csv
 import os
 import sys
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Tuple, Optional
 import re
 
@@ -136,7 +136,7 @@ def parse_standings(text: str) -> List[Dict[str, any]]:
     return standings
 
 
-def process_screenshot(image_path: str, week: Optional[int] = None) -> List[Dict[str, any]]:
+def process_screenshot(image_path: str, week_start: Optional[str] = None) -> List[Dict[str, any]]:
     """
     Process a single screenshot and return standings data.
     """
@@ -148,21 +148,38 @@ def process_screenshot(image_path: str, week: Optional[int] = None) -> List[Dict
     text = extract_text_from_image(image_path)
     standings = parse_standings(text)
 
-    # Add week information
-    if week is None:
-        week = get_current_week()
+    if week_start is None:
+        week_start = get_week_start_date()
 
     for entry in standings:
-        entry['week'] = week
+        entry['week'] = week_start
 
     return standings
 
 
-def get_current_week() -> int:
+def get_week_start_date() -> str:
     """
-    Get the current week number (1-52/53 based on ISO week).
+    Get the Monday of the current week in M/D/YY format.
     """
-    return datetime.now().isocalendar()[1]
+    today = datetime.now()
+    monday = today - timedelta(days=today.weekday())
+    month = monday.month
+    day = monday.day
+    year = monday.strftime('%y')
+    return f"{month}/{day}/{year}"
+
+
+def parse_date_string(date_str: str) -> datetime:
+    """
+    Parse a date string in M/D/YY or M/D/YYYY format.
+    """
+    try:
+        return datetime.strptime(date_str, '%m/%d/%y')
+    except ValueError:
+        try:
+            return datetime.strptime(date_str, '%m/%d/%Y')
+        except ValueError:
+            raise ValueError(f"Invalid date format: {date_str}. Use M/D/YY or M/D/YYYY")
 
 
 def merge_standings(*files_list) -> List[Dict[str, any]]:
@@ -209,12 +226,12 @@ def write_csv(standings: List[Dict[str, any]], output_path: str, include_omw: bo
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Convert sports standings screenshots to CSV',
+        description='Convert Magic: The Gathering tournament standings screenshots to CSV',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='''
 Examples:
   python screenshot_to_csv.py screenshot.png -o standings.csv
-  python screenshot_to_csv.py screenshot.png -w 5 -o week5.csv
+  python screenshot_to_csv.py screenshot.png -d 9/14/26 -o week.csv
   python screenshot_to_csv.py img1.png img2.png -o merged.csv
         '''
     )
@@ -232,9 +249,8 @@ Examples:
     )
 
     parser.add_argument(
-        '-w', '--week',
-        type=int,
-        help='Week number (default: current week)'
+        '-d', '--date',
+        help='Week start date in M/D/YY format (default: current week Monday)'
     )
 
     parser.add_argument(
@@ -249,7 +265,7 @@ Examples:
 
     # Process each image
     for image_path in args.images:
-        standings = process_screenshot(image_path, week=args.week)
+        standings = process_screenshot(image_path, week_start=args.date)
         all_standings.extend(standings)
 
     # Merge and remove duplicates

@@ -51,14 +51,14 @@ pip install -r requirements.txt
 ## Usage
 
 ### Basic Usage
-Convert a single round screenshot:
+Convert a single round screenshot (uses current week's Monday as the week date):
 ```bash
 python screenshot_to_csv.py standings.png -o tournament.csv
 ```
 
-### Specify Round Number
+### Specify Week Start Date
 ```bash
-python screenshot_to_csv.py standings.png -w 5 -o round5.csv
+python screenshot_to_csv.py standings.png -d 9/14/26 -o week.csv
 ```
 
 ### Multiple Rounds
@@ -72,9 +72,9 @@ python screenshot_to_csv.py round1.png round2.png round3.png -o all_rounds.csv
 python screenshot_to_csv.py standings.png --omw -o standings.csv
 ```
 
-### With Round and Multiple Files
+### With Date and Multiple Files
 ```bash
-python screenshot_to_csv.py round1.png round2.png -w 3 -o merged.csv
+python screenshot_to_csv.py round1.png round2.png -d 9/14/26 -o merged.csv
 ```
 
 ## Output Format
@@ -82,24 +82,24 @@ python screenshot_to_csv.py round1.png round2.png -w 3 -o merged.csv
 The generated CSV file contains:
 - **name**: Player name
 - **record**: Win-Loss-Draw record (e.g., "4-2-0")
-- **week**: Round number
+- **week**: Week start date in M/D/YY format (Monday of that week)
 - **points**: Calculated match points from the record
 - **omw** (optional): Opposition Match Win percentage (if `--omw` flag used)
 
 Example output:
 ```csv
 name,record,week,points
-Michael Ross,5-0-1,5,16
-Ethan Riegle,5-1-0,5,15
-Kora Benck,4-0-2,5,14
-arash afghahi,4-2-0,5,12
+Michael Ross,5-0-1,9/14/26,16
+Ethan Riegle,5-1-0,9/14/26,15
+Kora Benck,4-0-2,9/14/26,14
+arash afghahi,4-2-0,9/14/26,12
 ```
 
 ## Command Line Options
 
 ```
 -o, --output      Output CSV file path (default: standings.csv)
--w, --week        Round number (default: current ISO week)
+-d, --date        Week start date in M/D/YY format (default: current week Monday)
 --omw             Include OMW% column in output
 ```
 
@@ -113,13 +113,13 @@ When processing multiple round screenshots:
 ## Example Workflow
 
 ```bash
-# Process round 5 standings
-python screenshot_to_csv.py round_5.png -w 5 -o round5.csv
+# Process standings from September 14, 2026
+python screenshot_to_csv.py standings.png -d 9/14/26 -o week.csv
 
-# Later, add round 6 and merge
-python screenshot_to_csv.py round_5.png round_6.png -o rounds_5-6.csv
+# Later, add another screenshot and merge
+python screenshot_to_csv.py standings1.png standings2.png -d 9/14/26 -o merged.csv
 
-# This will have all players from both rounds, with no duplicates
+# This will have all players from both screenshots, with no duplicates
 ```
 
 ## Troubleshooting

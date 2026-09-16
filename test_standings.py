@@ -201,8 +201,8 @@ class TestParseStandings(unittest.TestCase):
 class TestExampleScenarios(unittest.TestCase):
     """Test real-world Magic: The Gathering tournament scenarios"""
 
-    def test_week_5_standings(self):
-        """Test parsing tournament standings from round 5"""
+    def test_tournament_standings(self):
+        """Test parsing tournament standings"""
         text = """
         RANK NAME POINTS W-L-D OMW%
         1 Michael Ross 16 5-0-1 56.8%
