@@ -125,35 +125,22 @@ python screenshot_to_csv.py round1.png round2.png round3.png \
 2. Use for backups or further processing
 
 
-## Step 5: Cloud Sync & Backup
+## Step 5: Set Up Google Apps Script Backend
 
-### Backup Codes
+The tracker uses Google Apps Script for persistent storage in Google Sheets. One-time setup:
 
-1. Go to **Cloud Sync** tab
-2. Click **Generate Backup Code**
-3. Copy the displayed code
-4. Save it somewhere safe (email, document, etc.)
-5. To restore: paste the code into **Restore from Backup Code** and click **Restore**
+1. Go to https://script.google.com
+2. Create a new project
+3. Copy the code from `mtg_tracker_apps_script.gs` in this repository
+4. Paste it into the script editor
+5. Click **Deploy** → **New deployment** → Type: **Web app**
+   - Execute as: your Google account
+   - Who has access: **Anyone**
+6. Click **Deploy** and copy the deployment URL
+7. In the tracker, go to **Settings** tab
+8. Paste the URL and click **Save URL**
 
-### Auto Backups
-
-1. The tracker automatically saves snapshots every time you import data
-2. View your backup history in the **Cloud Sync** tab
-3. Click **Restore** next to any backup to recover that data
-
-### Google Sheets Integration
-
-1. Go to **Cloud Sync** tab
-2. Click **Export to Google Sheets** 
-3. A CSV download will be ready
-4. Import manually into Google Sheets for shared access
-
-### Cloud URL Import
-
-1. If data is hosted online (Google Drive, GitHub Gist, etc.)
-2. Go to **Cloud Sync** tab
-3. Paste the public URL into **Import from Cloud URL**
-4. Click **Import**
+Your data is now synced to Google Sheets! You can share the sheet with others for collaborative updates.
 
 
 ## Recurring Weekly Workflow
@@ -255,24 +242,22 @@ Regularly export JSON to keep backups:
 4. Click **Download JSON**
 5. Store in a safe location (Google Drive, etc.)
 
-## Database Features
+## Data Storage
 
-### Data Persistence
+### Google Sheets Backend
 
-All data is stored in your browser's IndexedDB database:
-- Persists across browser sessions
-- Private to your browser
-- No data sent to external servers
+All tournament data is stored in a Google Sheet managed by your Google Apps Script:
+- Data persists in Google Sheets (your Google account)
+- Share the sheet link with others for collaborative access
+- No data stored locally on your computer
+- Access from any device
 
-### Clear Data
+### Backup Your Data
 
-To start fresh:
-
-1. Go to **Manage** tab
-2. Click **Clear All Data**
-3. Confirm when prompted
-
-⚠️ **Warning:** This cannot be undone!
+Regular backups are recommended:
+1. Go to **Export & Copy** tab in the tracker
+2. Click **Download CSV** or **Download JSON**
+3. Save locally or to cloud storage (Google Drive, etc.)
 
 ## Troubleshooting
 
