@@ -47,7 +47,7 @@ def calculate_points(record: str) -> int:
     Example: "4-2-0" = 4*3 + 2*0 + 0*1 = 12 points
     """
     # Extract W-L-D numbers from various formats
-    pattern = r'(\d+)-(\d+)(?:-(\d+))?'
+    pattern = r'(\d{1,2})-(\d{1,2})(?:-(\d{1,2}))?'
     match = re.search(pattern, record)
 
     if not match:
@@ -101,7 +101,7 @@ def parse_standings(text: str) -> List[Dict[str, any]]:
                 rank = int(parts[0])
                 idx = 1
 
-            record_pattern = r'\d+-\d+(?:-\d+)?'
+            record_pattern = r'\d{1,2}-\d{1,2}(?:-\d{1,2})?'
             record = None
             record_idx = None
 
@@ -230,7 +230,7 @@ def write_csv(standings: List[Dict[str, any]], output_path: str, include_omw: bo
 
     try:
         with open(output_path, 'w', newline='') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames, quoting=csv.QUOTE_NONNUMERIC)
             writer.writeheader()
 
             for entry in standings:
