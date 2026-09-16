@@ -100,8 +100,20 @@ arash afghahi,4-2-0,9/14/26,12
 ```
 -o, --output      Output CSV file path (default: standings.csv)
 -d, --date        Week start date in M/D/YY format (default: current week Monday)
+-s, --store       Store/event name for tracking (optional)
+--json            Output JSON file path for artifact database (optional)
 --omw             Include OMW% column in output
 ```
+
+## JSON Output for Tracking Artifact
+
+Generate JSON output for use with the standings tracking artifact:
+
+```bash
+python screenshot_to_csv.py standings.png -d 9/14/26 -s "Store Name" --json output.json
+```
+
+The JSON file can be imported into the tracking artifact for historical data aggregation and analysis.
 
 ## Duplicate Handling
 

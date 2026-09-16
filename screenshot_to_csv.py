@@ -8,6 +8,7 @@ with automatic match point calculation. Supports Win/Loss/Draw records and round
 
 import argparse
 import csv
+import json
 import os
 import sys
 from pathlib import Path
@@ -224,15 +225,31 @@ def write_csv(standings: List[Dict[str, any]], output_path: str, include_omw: bo
         print(f"Error writing CSV: {e}")
 
 
+def write_json(standings: List[Dict[str, any]], output_path: str):
+    """Write standings to JSON file."""
+    if not standings:
+        print("No data to write")
+        return
+
+    try:
+        import json
+        with open(output_path, 'w') as jsonfile:
+            json.dump(standings, jsonfile, indent=2)
+
+        print(f"JSON written to: {output_path}")
+    except Exception as e:
+        print(f"Error writing JSON: {e}")
+
+
 def main():
     parser = argparse.ArgumentParser(
-        description='Convert Magic: The Gathering tournament standings screenshots to CSV',
+        description='Convert Magic: The Gathering tournament standings screenshots to CSV/JSON',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='''
 Examples:
   python screenshot_to_csv.py screenshot.png -o standings.csv
-  python screenshot_to_csv.py screenshot.png -d 9/14/26 -o week.csv
-  python screenshot_to_csv.py img1.png img2.png -o merged.csv
+  python screenshot_to_csv.py screenshot.png -d 9/14/26 -o week.csv -s "Store Name"
+  python screenshot_to_csv.py img1.png img2.png -o merged.csv --json standings.json
         '''
     )
 
@@ -254,6 +271,16 @@ Examples:
     )
 
     parser.add_argument(
+        '-s', '--store',
+        help='Store/event name for tracking (optional)'
+    )
+
+    parser.add_argument(
+        '--json',
+        help='Output JSON file path (optional, for artifact database)'
+    )
+
+    parser.add_argument(
         '--omw',
         action='store_true',
         help='Include OMW% column in output'
@@ -272,8 +299,17 @@ Examples:
     if len(args.images) > 1:
         all_standings = merge_standings(all_standings)
 
+    # Add store name if provided
+    if args.store:
+        for entry in all_standings:
+            entry['store'] = args.store
+
     # Write CSV
     write_csv(all_standings, args.output, include_omw=args.omw)
+
+    # Write JSON if requested
+    if args.json:
+        write_json(all_standings, args.json)
 
 
 if __name__ == '__main__':
