@@ -194,6 +194,34 @@
     <script>
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyiVH_4CPYMiKyL5CBrvLWk40flxccReKSt6q9ClZcN2xztAn_6IrCn6wIEwjArPgnlZQ/exec';
 
+        function formatDate(dateValue) {
+            if (!dateValue) return '';
+
+            // If it's already in M/D/YY format, return as-is
+            if (typeof dateValue === 'string' && /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(dateValue)) {
+                return dateValue;
+            }
+
+            // If it's an ISO string or timestamp, parse it
+            let date;
+            if (typeof dateValue === 'string' && dateValue.includes('T')) {
+                date = new Date(dateValue);
+            } else if (typeof dateValue === 'number') {
+                date = new Date(dateValue);
+            } else if (dateValue instanceof Date) {
+                date = dateValue;
+            } else {
+                return String(dateValue);
+            }
+
+            if (isNaN(date.getTime())) return String(dateValue);
+
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+            const year = date.getFullYear().toString().slice(-2);
+            return `${month}/${day}/${year}`;
+        }
+
         async function loadData() {
             try {
                 const response = await fetch(SCRIPT_URL);
@@ -239,7 +267,7 @@
                     <td>${row.name}</td>
                     <td>${row.record}</td>
                     <td><strong>${row.points}</strong></td>
-                    <td>${row.week}</td>
+                    <td>${formatDate(row.week)}</td>
                 </tr>
             `).join('');
 
@@ -283,7 +311,7 @@
             const currentWeek = weekSelect.value;
             weekSelect.innerHTML = '<option value="">All Weeks</option>' +
                 Array.from(weeks).sort().reverse().map(w =>
-                    `<option value="${w}">${w}</option>`
+                    `<option value="${w}">${formatDate(w)}</option>`
                 ).join('');
             weekSelect.value = currentWeek;
         }
