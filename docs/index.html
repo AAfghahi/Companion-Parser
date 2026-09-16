@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MTG Tournament Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --border: #e0e0e0;
+            --accent: #6366f1;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-primary: #1a1a1a;
+                --bg-secondary: #2d2d2d;
+                --text-primary: #ffffff;
+                --text-secondary: #b0b0b0;
+                --border: #404040;
+                --accent: #818cf8;
+            }
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95em;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 12px 20px;
+            border: none;
+            background: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1em;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .section {
+            background: var(--bg-secondary);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .section h2 {
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 1em;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+            font-family: 'Courier New', monospace;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .btn-secondary {
+            background: var(--text-secondary);
+            color: white;
+            margin-left: 10px;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.9em;
+        }
+
+        .btn-success {
+            background: var(--success);
+        }
+
+        .btn-warning {
+            background: var(--warning);
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border-left: 4px solid;
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: var(--success);
+            color: var(--success);
+        }
+
+        .alert-error {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+
+        .alert-info {
+            background: rgba(99, 102, 241, 0.1);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-primary);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        thead {
+            background: var(--bg-secondary);
+            font-weight: 600;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tr:hover {
+            background: var(--bg-secondary);
+        }
+
+        .code-block {
+            background: var(--bg-primary);
+            padding: 15px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            word-break: break-all;
+            font-size: 0.9em;
+            margin: 10px 0;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: var(--bg-primary);
+            padding: 15px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+
+        .stat-value {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: var(--accent);
+            margin-top: 5px;
+        }
+
+        .backup-item {
+            background: var(--bg-primary);
+            padding: 15px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .two-col {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚔️ MTG Tournament Tracker</h1>
+            <p class="subtitle">Track Magic: The Gathering tournament standings - Now with cloud sync</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+            <button class="tab-btn" data-tab="import">Import Data</button>
+            <button class="tab-btn" data-tab="export">Export & Copy</button>
+            <button class="tab-btn" data-tab="cloud">☁️ Cloud Sync</button>
+            <button class="tab-btn" data-tab="manage">Manage</button>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <div class="section">
+                <h2>Weekly Leaderboard</h2>
+                <div id="leaderboardContainer"></div>
+            </div>
+
+            <div class="section">
+                <h2>Top Performers (All Time)</h2>
+                <div id="topPerformersContainer"></div>
+            </div>
+        </div>
+
+        <!-- Import Tab -->
+        <div id="import" class="tab-content">
+            <div class="section">
+                <h2>Import Tournament Data</h2>
+                <div id="importAlert"></div>
+
+                <div class="form-group">
+                    <label>Upload JSON or CSV File:</label>
+                    <input type="file" id="fileInput" accept=".json,.csv">
+                </div>
+
+                <div class="form-group">
+                    <label>Or paste JSON/CSV data:</label>
+                    <textarea id="pasteInput" placeholder="Paste JSON array or CSV data here..."></textarea>
+                </div>
+
+                <button onclick="importData()">Import Data</button>
+            </div>
+        </div>
+
+        <!-- Export Tab -->
+        <div id="export" class="tab-content">
+            <div class="section">
+                <h2>Export for Google Docs</h2>
+                <div style="margin-bottom: 20px;">
+                    <button onclick="generateFormattedTable()">Generate Formatted Table</button>
+                    <button class="btn-secondary" onclick="exportCSV()">Download CSV</button>
+                    <button class="btn-secondary" onclick="exportJSON()">Download JSON</button>
+                </div>
+                <div id="formattedTableContainer"></div>
+            </div>
+        </div>
+
+        <!-- Cloud Sync Tab -->
+        <div id="cloud" class="tab-content">
+            <div class="section">
+                <h2>☁️ Cloud Backup & Sync</h2>
+                <div id="cloudAlert"></div>
+
+                <!-- Backup Codes -->
+                <h3 style="margin: 20px 0 10px 0;">Option 1: Backup Codes</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                    Generate a backup code to restore your data anywhere, even on different devices.
+                </p>
+                <button class="btn-success" onclick="generateBackupCode()">Generate Backup Code</button>
+                <div id="backupCodeContainer"></div>
+
+                <hr style="margin: 30px 0; border: none; border-top: 1px solid var(--border);">
+
+                <!-- Restore from Code -->
+                <h3 style="margin: 20px 0 10px 0;">Restore from Backup Code</h3>
+                <div class="form-group">
+                    <label>Paste your backup code:</label>
+                    <textarea id="restoreCode" placeholder="Paste your backup code here..." style="min-height: 80px;"></textarea>
+                </div>
+                <button class="btn-warning" onclick="restoreFromCode()">Restore Data</button>
+
+                <hr style="margin: 30px 0; border: none; border-top: 1px solid var(--border);">
+
+                <!-- Auto Backups -->
+                <h3 style="margin: 20px 0 10px 0;">Option 2: Auto Backups</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                    Automatic local backups are saved every time you import data.
+                </p>
+                <div id="backupHistoryContainer"></div>
+
+                <hr style="margin: 30px 0; border: none; border-top: 1px solid var(--border);">
+
+                <!-- Google Sheets -->
+                <h3 style="margin: 20px 0 10px 0;">Option 3: Google Sheets Sync</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                    Export to Google Sheets for live collaboration and embedding in Google Docs.
+                </p>
+                <button onclick="exportToGoogleSheets()">Export as Google Sheets CSV</button>
+                <p style="color: var(--text-secondary); font-size: 0.9em; margin-top: 10px;">
+                    Instructions: Create a new Google Sheet → Go to File → Import → Upload or paste CSV → Choose "Replace all"
+                </p>
+
+                <hr style="margin: 30px 0; border: none; border-top: 1px solid var(--border);">
+
+                <!-- Cloud Storage Instructions -->
+                <h3 style="margin: 20px 0 10px 0;">Option 4: Cloud Storage (Google Drive)</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                    Manually upload exported JSON files to Google Drive.
+                </p>
+                <button onclick="exportJSON()">Download JSON for Google Drive</button>
+                <p style="color: var(--text-secondary); font-size: 0.9em; margin-top: 10px;">
+                    Instructions: Download JSON → Upload to Google Drive → Share link → Paste link below to import
+                </p>
+                <div class="form-group" style="margin-top: 15px;">
+                    <label>Import from Cloud URL:</label>
+                    <input type="text" id="cloudUrl" placeholder="Paste public JSON URL (e.g., from Google Drive shared link)">
+                    <button onclick="importFromUrl()" style="margin-top: 10px;">Import from URL</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manage Tab -->
+        <div id="manage" class="tab-content">
+            <div class="section">
+                <h2>Database Statistics</h2>
+                <div class="grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Total Entries</div>
+                        <div class="stat-value" id="totalEntries">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Unique Players</div>
+                        <div class="stat-value" id="uniqueParticipants">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Weeks Tracked</div>
+                        <div class="stat-value" id="weeksTracked">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Stores</div>
+                        <div class="stat-value" id="storesCount">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>Data Management</h2>
+                <button class="btn-secondary" onclick="clearAllData()" style="background: var(--danger);">Clear All Data</button>
+                <p style="margin-top: 10px; color: var(--text-secondary); font-size: 0.9em;">Warning: This cannot be undone!</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DB_NAME = 'mtg-tracker';
+        const STORE_NAME = 'standings';
+        const BACKUP_STORE = 'backups';
+        let db;
+
+        // Initialize IndexedDB with backup store
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, 2);
+
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => {
+                    db = request.result;
+                    resolve(db);
+                };
+
+                request.onupgradeneeded = (e) => {
+                    db = e.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+                        store.createIndex('week', 'week', { unique: false });
+                    }
+                    if (!db.objectStoreNames.contains(BACKUP_STORE)) {
+                        db.createObjectStore(BACKUP_STORE, { keyPath: 'id', autoIncrement: true });
+                    }
+                };
+            });
+        }
+
+        // Get all standings
+        async function getAllStandings() {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction([STORE_NAME], 'readonly');
+                const store = tx.objectStore(STORE_NAME);
+                const request = store.getAll();
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+            });
+        }
+
+        // Add standings
+        async function addStandings(data) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction([STORE_NAME], 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                const request = store.add(data);
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+            });
+        }
+
+        // Save backup
+        async function saveBackup(name, data) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction([BACKUP_STORE], 'readwrite');
+                const store = tx.objectStore(BACKUP_STORE);
+                const request = store.add({
+                    name: name,
+                    data: data,
+                    timestamp: new Date().toISOString(),
+                    count: data.length
+                });
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+            });
+        }
+
+        // Get backups
+        async function getBackups() {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction([BACKUP_STORE], 'readonly');
+                const store = tx.objectStore(BACKUP_STORE);
+                const request = store.getAll();
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+            });
+        }
+
+        // Restore backup
+        async function restoreBackup(backupId) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction([BACKUP_STORE], 'readonly');
+                const store = tx.objectStore(BACKUP_STORE);
+                const request = store.get(backupId);
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+            });
+        }
+
+        // Generate backup code
+        async function generateBackupCode() {
+            const data = await getAllStandings();
+            const json = JSON.stringify(data);
+            const encoded = btoa(json); // Base64 encode
+
+            const code = encoded.match(/.{1,50}/g).join('\n');
+
+            const container = document.getElementById('backupCodeContainer');
+            container.innerHTML = `
+                <div class="alert alert-info" style="margin-top: 15px;">
+                    Save this code in a safe place. You can restore your data anytime with it.
+                </div>
+                <div class="code-block">${code}</div>
+                <button class="btn-sm" onclick="copyCode()">Copy Code</button>
+                <button class="btn-sm btn-secondary" onclick="downloadBackupCode()">Download Code</button>
+            `;
+
+            window.backupCode = code.replace(/\n/g, '');
+        }
+
+        // Copy backup code
+        function copyCode() {
+            navigator.clipboard.writeText(window.backupCode).then(() => {
+                showAlert('Backup code copied to clipboard!', 'success', 'cloudAlert');
+            });
+        }
+
+        // Download backup code
+        function downloadBackupCode() {
+            const text = `MTG Tournament Tracker Backup Code\nGenerated: ${new Date().toLocaleString()}\n\n${window.backupCode}`;
+            downloadFile(text, 'mtg_backup.txt', 'text/plain');
+        }
+
+        // Restore from code
+        async function restoreFromCode() {
+            const code = document.getElementById('restoreCode').value.trim().replace(/\n/g, '');
+            if (!code) {
+                showAlert('Please paste a backup code', 'error', 'cloudAlert');
+                return;
+            }
+
+            try {
+                const json = atob(code);
+                const data = JSON.parse(json);
+
+                if (!Array.isArray(data)) {
+                    showAlert('Invalid backup code', 'error', 'cloudAlert');
+                    return;
+                }
+
+                // Clear and restore
+                await new Promise((resolve) => {
+                    const tx = db.transaction([STORE_NAME], 'readwrite');
+                    const store = tx.objectStore(STORE_NAME);
+                    store.clear();
+                    tx.oncomplete = () => resolve();
+                });
+
+                let restored = 0;
+                for (const entry of data) {
+                    await addStandings(entry);
+                    restored++;
+                }
+
+                showAlert(`Restored ${restored} entries from backup`, 'success', 'cloudAlert');
+                document.getElementById('restoreCode').value = '';
+                refreshAllViews();
+            } catch (e) {
+                showAlert(`Error: Invalid backup code or corrupted data`, 'error', 'cloudAlert');
+            }
+        }
+
+        // Import from URL
+        async function importFromUrl() {
+            const url = document.getElementById('cloudUrl').value.trim();
+            if (!url) {
+                showAlert('Please paste a URL', 'error', 'cloudAlert');
+                return;
+            }
+
+            try {
+                const response = await fetch(url);
+                const text = await response.text();
+
+                let data;
+                if (text.startsWith('[')) {
+                    data = JSON.parse(text);
+                } else {
+                    data = parseCSV(text);
+                }
+
+                let imported = 0;
+                for (const entry of data) {
+                    if (entry.name && entry.record && entry.week && entry.points !== undefined) {
+                        await addStandings({
+                            name: entry.name,
+                            record: entry.record,
+                            week: entry.week,
+                            points: parseInt(entry.points),
+                            store: entry.store || 'Unknown',
+                            imported: new Date().toISOString()
+                        });
+                        imported++;
+                    }
+                }
+
+                showAlert(`Imported ${imported} entries from cloud`, 'success', 'cloudAlert');
+                refreshAllViews();
+            } catch (e) {
+                showAlert(`Error fetching from URL: ${e.message}`, 'error', 'cloudAlert');
+            }
+        }
+
+        // Export to Google Sheets
+        async function exportToGoogleSheets() {
+            const data = await getAllStandings();
+            let csv = 'name,record,week,points,store\n';
+            data.forEach(entry => {
+                csv += `"${entry.name}","${entry.record}","${entry.week}",${entry.points},"${entry.store}"\n`;
+            });
+            downloadFile(csv, 'mtg_standings.csv', 'text/csv');
+            showAlert('CSV downloaded. Open Google Sheets → File → Import → Upload this file', 'info', 'cloudAlert');
+        }
+
+        // Parse CSV
+        function parseCSV(csv) {
+            const lines = csv.trim().split('\n');
+            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+            const data = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+                const values = lines[i].split(',').map(v => v.trim());
+                const obj = {};
+                headers.forEach((header, idx) => {
+                    obj[header] = values[idx] || '';
+                });
+                data.push(obj);
+            }
+            return data;
+        }
+
+        // Import data
+        async function importData() {
+            const file = document.getElementById('fileInput').files[0];
+            const pasteData = document.getElementById('pasteInput').value.trim();
+            let data = [];
+
+            try {
+                if (file) {
+                    const text = await file.text();
+                    if (file.name.endsWith('.json')) {
+                        data = JSON.parse(text);
+                    } else if (file.name.endsWith('.csv')) {
+                        data = parseCSV(text);
+                    }
+                } else if (pasteData) {
+                    if (pasteData.startsWith('[')) {
+                        data = JSON.parse(pasteData);
+                    } else {
+                        data = parseCSV(pasteData);
+                    }
+                } else {
+                    showAlert('Please select a file or paste data', 'error', 'importAlert');
+                    return;
+                }
+
+                if (!Array.isArray(data)) {
+                    showAlert('Data must be an array', 'error', 'importAlert');
+                    return;
+                }
+
+                let imported = 0;
+                const validEntries = [];
+                for (const entry of data) {
+                    if (entry.name && entry.record && entry.week && entry.points !== undefined) {
+                        const standing = {
+                            name: entry.name,
+                            record: entry.record,
+                            week: entry.week,
+                            points: parseInt(entry.points),
+                            store: entry.store || 'Unknown',
+                            imported: new Date().toISOString()
+                        };
+                        await addStandings(standing);
+                        validEntries.push(standing);
+                        imported++;
+                    }
+                }
+
+                // Save backup
+                if (validEntries.length > 0) {
+                    await saveBackup(`Import ${new Date().toLocaleString()}`, validEntries);
+                }
+
+                showAlert(`Imported ${imported} entries`, 'success', 'importAlert');
+                document.getElementById('fileInput').value = '';
+                document.getElementById('pasteInput').value = '';
+                refreshAllViews();
+                refreshBackupHistory();
+            } catch (e) {
+                showAlert(`Error: ${e.message}`, 'error', 'importAlert');
+            }
+        }
+
+        // Refresh backup history
+        async function refreshBackupHistory() {
+            const backups = await getBackups();
+            const container = document.getElementById('backupHistoryContainer');
+
+            if (backups.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-secondary);">No backups yet. They are created automatically when you import data.</p>';
+                return;
+            }
+
+            let html = '';
+            backups.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 5).forEach(backup => {
+                const date = new Date(backup.timestamp).toLocaleString();
+                html += `
+                    <div class="backup-item">
+                        <div>
+                            <strong>${backup.name}</strong><br>
+                            <small style="color: var(--text-secondary);">${date} • ${backup.count} entries</small>
+                        </div>
+                        <button class="btn-sm" onclick="restoreFromBackup(${backup.id})">Restore</button>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        // Restore from backup
+        async function restoreFromBackup(backupId) {
+            if (!confirm('Restore this backup? Current data will be replaced.')) return;
+
+            const backup = await restoreBackup(backupId);
+
+            // Clear and restore
+            await new Promise((resolve) => {
+                const tx = db.transaction([STORE_NAME], 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                store.clear();
+                tx.oncomplete = () => resolve();
+            });
+
+            for (const entry of backup.data) {
+                await addStandings(entry);
+            }
+
+            showAlert(`Restored ${backup.count} entries from ${backup.name}`, 'success', 'cloudAlert');
+            refreshAllViews();
+        }
+
+        // Clear all data
+        async function clearAllData() {
+            if (!confirm('Delete all data? This cannot be undone.')) return;
+
+            await new Promise((resolve) => {
+                const tx = db.transaction([STORE_NAME], 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                store.clear();
+                tx.oncomplete = () => resolve();
+            });
+
+            showAlert('All data cleared', 'success', 'importAlert');
+            refreshAllViews();
+        }
+
+        // Show alert
+        function showAlert(message, type, containerId) {
+            const container = document.getElementById(containerId || 'importAlert');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            container.innerHTML = '';
+            container.appendChild(alertDiv);
+        }
+
+        // Download file
+        function downloadFile(content, filename, type) {
+            const blob = new Blob([content], { type });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Refresh leaderboard
+        async function refreshLeaderboard() {
+            const data = await getAllStandings();
+            const grouped = {};
+
+            data.forEach(entry => {
+                const key = `${entry.week}|${entry.store}`;
+                if (!grouped[key]) grouped[key] = [];
+                grouped[key].push(entry);
+            });
+
+            Object.keys(grouped).forEach(key => {
+                grouped[key].sort((a, b) => b.points - a.points);
+            });
+
+            const container = document.getElementById('leaderboardContainer');
+            if (Object.keys(grouped).length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-secondary);">No data yet. Go to Import Data tab to get started.</div>';
+                return;
+            }
+
+            let html = '';
+            Object.keys(grouped).sort().reverse().slice(0, 3).forEach(key => {
+                const [week, store] = key.split('|');
+                html += `<h3 style="margin: 20px 0 10px 0;">${week} - ${store}</h3>`;
+                html += '<table><thead><tr><th>#</th><th>Player</th><th>Record</th><th>Points</th></tr></thead><tbody>';
+                grouped[key].forEach((entry, idx) => {
+                    html += `<tr><td>${idx + 1}</td><td>${entry.name}</td><td>${entry.record}</td><td style="font-weight: 600; color: var(--success);">${entry.points}</td></tr>`;
+                });
+                html += '</tbody></table>';
+            });
+
+            container.innerHTML = html;
+        }
+
+        // Refresh top performers
+        async function refreshTopPerformers() {
+            const data = await getAllStandings();
+            const byName = {};
+
+            data.forEach(entry => {
+                if (!byName[entry.name]) {
+                    byName[entry.name] = { total: 0, appearances: 0 };
+                }
+                byName[entry.name].total += entry.points;
+                byName[entry.name].appearances++;
+            });
+
+            const sorted = Object.entries(byName)
+                .map(([name, stats]) => ({
+                    name,
+                    total: stats.total,
+                    average: (stats.total / stats.appearances).toFixed(1),
+                    appearances: stats.appearances
+                }))
+                .sort((a, b) => b.total - a.total)
+                .slice(0, 10);
+
+            const container = document.getElementById('topPerformersContainer');
+            if (sorted.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-secondary);">No data yet.</p>';
+                return;
+            }
+
+            let html = '<table><thead><tr><th>#</th><th>Player</th><th>Tournaments</th><th>Total</th><th>Avg</th></tr></thead><tbody>';
+            sorted.forEach((player, idx) => {
+                html += `<tr><td>${idx + 1}</td><td>${player.name}</td><td>${player.appearances}</td><td style="font-weight: 600; color: var(--success);">${player.total}</td><td>${player.average}</td></tr>`;
+            });
+            html += '</tbody></table>';
+
+            container.innerHTML = html;
+        }
+
+        // Refresh stats
+        async function refreshStats() {
+            const data = await getAllStandings();
+            const weeks = new Set(data.map(d => d.week)).size;
+            const participants = new Set(data.map(d => d.name)).size;
+            const stores = new Set(data.map(d => d.store)).size;
+
+            document.getElementById('totalEntries').textContent = data.length;
+            document.getElementById('uniqueParticipants').textContent = participants;
+            document.getElementById('weeksTracked').textContent = weeks;
+            document.getElementById('storesCount').textContent = stores;
+        }
+
+        // Refresh all views
+        async function refreshAllViews() {
+            await refreshStats();
+            await refreshLeaderboard();
+            await refreshTopPerformers();
+        }
+
+        // Export functions
+        async function generateFormattedTable() {
+            const data = await getAllStandings();
+            data.sort((a, b) => b.points - a.points);
+
+            let table = 'Player\tRecord\tPoints\tStore\tWeek\n';
+            table += '─'.repeat(60) + '\n';
+            data.forEach(entry => {
+                table += `${entry.name}\t${entry.record}\t${entry.points}\t${entry.store}\t${entry.week}\n`;
+            });
+
+            const container = document.getElementById('formattedTableContainer');
+            container.innerHTML = `
+                <textarea style="width: 100%; height: 300px; font-family: monospace; font-size: 0.9em;" readonly>${table}</textarea>
+                <button class="btn-sm" onclick="copyFormattedTable()" style="margin-top: 10px;">Copy to Clipboard</button>
+            `;
+        }
+
+        function copyFormattedTable() {
+            const textarea = document.querySelector('#formattedTableContainer textarea');
+            navigator.clipboard.writeText(textarea.value).then(() => {
+                showAlert('Copied to clipboard!', 'success', null);
+            });
+        }
+
+        async function exportCSV() {
+            const data = await getAllStandings();
+            let csv = 'name,record,week,points,store\n';
+            data.forEach(entry => {
+                csv += `"${entry.name}","${entry.record}","${entry.week}",${entry.points},"${entry.store}"\n`;
+            });
+            downloadFile(csv, 'standings.csv', 'text/csv');
+        }
+
+        async function exportJSON() {
+            const data = await getAllStandings();
+            downloadFile(JSON.stringify(data, null, 2), 'standings.json', 'application/json');
+        }
+
+        // Tab switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                e.target.classList.add('active');
+                document.getElementById(e.target.getAttribute('data-tab')).classList.add('active');
+            });
+        });
+
+        // Initialize
+        initDB().then(() => {
+            refreshAllViews();
+            refreshBackupHistory();
+        });
+    </script>
+</body>
+</html>
