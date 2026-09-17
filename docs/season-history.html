@@ -201,6 +201,13 @@
             <select id="seasonSelect">
                 <option value="">Loading seasons...</option>
             </select>
+            <label for="weekFilter">Filter by Week:</label>
+            <select id="weekFilter">
+                <option value="">All Weeks</option>
+            </select>
+            <label for="searchPlayer">Search Player:</label>
+            <input type="text" id="searchPlayer" placeholder="Enter player name..." list="playerNames">
+            <datalist id="playerNames"></datalist>
         </div>
 
         <div id="seasonContent">
@@ -219,6 +226,7 @@
 
     <script>
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyiVH_4CPYMiKyL5CBrvLWk40flxccReKSt6q9ClZcN2xztAn_6IrCn6wIEwjArPgnlZQ/exec';
+        let currentSeasonRows = [];
 
         function formatDate(dateValue) {
             if (!dateValue) return '';
@@ -283,6 +291,9 @@
                 document.getElementById('seasonContent').innerHTML =
                     '<div class="loading">Select a season to view data</div>';
                 document.getElementById('statsCard').style.display = 'none';
+                document.getElementById('weekFilter').innerHTML = '<option value="">All Weeks</option>';
+                document.getElementById('searchPlayer').value = '';
+                document.getElementById('playerNames').innerHTML = '';
                 return;
             }
 
@@ -296,6 +307,8 @@
                     return;
                 }
 
+                currentSeasonRows = rows;
+                populateFilters(rows);
                 renderSeasonData(rows, seasonName);
                 updateStatistics(rows);
             } catch (error) {
@@ -305,6 +318,23 @@
             }
         }
 
+        function populateFilters(rows) {
+            const dataRows = rows.slice(1);
+            const weeks = new Set(dataRows.map(r => r[3]).filter(Boolean));
+            const players = new Set(dataRows.map(r => r[0]).filter(Boolean));
+
+            const weekSelect = document.getElementById('weekFilter');
+            weekSelect.innerHTML = '<option value="">All Weeks</option>' +
+                Array.from(weeks).sort().reverse().map(w =>
+                    `<option value="${w}">${formatDate(w)}</option>`
+                ).join('');
+
+            const playerNames = document.getElementById('playerNames');
+            playerNames.innerHTML = Array.from(players).sort().map(name =>
+                `<option value="${name}"></option>`
+            ).join('');
+        }
+
         function renderSeasonData(rows, seasonName) {
             if (rows.length <= 1) {
                 document.getElementById('seasonContent').innerHTML =
@@ -312,17 +342,32 @@
                 return;
             }
 
+            const weekFilter = document.getElementById('weekFilter').value;
+            const searchTerm = document.getElementById('searchPlayer').value.toLowerCase();
+
+            let filteredRows = rows.slice(1);
+
+            if (weekFilter) {
+                filteredRows = filteredRows.filter(row => row[3] === weekFilter);
+            }
+
+            if (searchTerm) {
+                filteredRows = filteredRows.filter(row => row[0].toLowerCase().includes(searchTerm));
+            }
+
             const playerStats = {};
-            rows.slice(1).forEach(row => {
+            filteredRows.forEach(row => {
                 const name = row[0];
                 const points = parseInt(row[2]) || 0;
+                const week = row[3] || '';
                 const omw = row[4] ? parseFloat(row[4]) : null;
 
                 if (!playerStats[name]) {
-                    playerStats[name] = { total: 0, count: 0, omwValues: [] };
+                    playerStats[name] = { total: 0, count: 0, omwValues: [], weeks: [] };
                 }
                 playerStats[name].total += points;
                 playerStats[name].count += 1;
+                playerStats[name].weeks.push(week);
                 if (omw !== null) {
                     playerStats[name].omwValues.push(omw);
                 }
@@ -344,7 +389,7 @@
                 });
 
             const html = `
-                <h2>${seasonName} - Final Standings</h2>
+                <h2>${seasonName}${weekFilter ? ` - Week ${formatDate(weekFilter)}` : ' - Final Standings'}</h2>
                 <div class="table-container">
                     <table>
                         <thead>
@@ -358,7 +403,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            ${leaderboard.map((player, idx) => `
+                            ${leaderboard.length > 0 ? leaderboard.map((player, idx) => `
                                 <tr>
                                     <td>${idx + 1}</td>
                                     <td>${player.name}</td>
@@ -367,7 +412,7 @@
                                     <td>${player.avg}</td>
                                     <td>${player.avgOmw}</td>
                                 </tr>
-                            `).join('')}
+                            `).join('') : '<tr><td colspan="6" style="text-align: center;">No results match your filters</td></tr>'}
                         </tbody>
                     </table>
                 </div>
@@ -388,7 +433,21 @@
         }
 
         document.getElementById('seasonSelect').addEventListener('change', (e) => {
+            document.getElementById('weekFilter').value = '';
+            document.getElementById('searchPlayer').value = '';
             loadSeason(e.target.value);
+        });
+
+        document.getElementById('weekFilter').addEventListener('change', () => {
+            if (currentSeasonRows.length > 0) {
+                renderSeasonData(currentSeasonRows, document.getElementById('seasonSelect').value);
+            }
+        });
+
+        document.getElementById('searchPlayer').addEventListener('input', () => {
+            if (currentSeasonRows.length > 0) {
+                renderSeasonData(currentSeasonRows, document.getElementById('seasonSelect').value);
+            }
         });
 
         window.addEventListener('load', () => {
