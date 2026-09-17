@@ -725,10 +725,18 @@
                 `<option value="${w}">${formatDate(w)}</option>`
             ).join('');
 
-            const playerNames = new Set(rows.slice(1).map(r => r[0]).filter(Boolean));
+            const playerNames = Array.from(new Set(rows.slice(1).map(r => r[0]).filter(Boolean))).sort();
+
+            // Populate search autocomplete
             const datalist = document.getElementById('playerNames');
-            datalist.innerHTML = Array.from(playerNames).sort().map(name =>
+            datalist.innerHTML = playerNames.map(name =>
                 `<option value="${name}"></option>`
+            ).join('');
+
+            // Populate player name dropdown in report modal
+            const playerNameSelect = document.getElementById('playerName');
+            playerNameSelect.innerHTML = '<option value="">Select your name</option>' + playerNames.map(name =>
+                `<option value="${name}">${name}</option>`
             ).join('');
         }
 
@@ -866,7 +874,9 @@
             <form id="reportForm">
                 <div class="form-group">
                     <label for="playerName">Your Name *</label>
-                    <input type="text" id="playerName" placeholder="Enter your player name" required>
+                    <select id="playerName" required>
+                        <option value="">Select your name</option>
+                    </select>
                 </div>
 
                 <div class="form-group">
