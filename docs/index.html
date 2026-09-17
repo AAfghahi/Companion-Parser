@@ -453,7 +453,11 @@
                     const aOmw = parseFloat(a.avgOmw) || 0;
                     const bOmw = parseFloat(b.avgOmw) || 0;
                     return bOmw - aOmw;
-                });
+                })
+                .map((player, idx) => ({
+                    ...player,
+                    rank: idx + 1
+                }));
 
             // Apply search filter to weekly scores and leaderboard
             if (searchTerm) {
@@ -511,9 +515,9 @@
             if (pageData.length === 0) {
                 leaderboardTbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">No data yet</td></tr>';
             } else {
-                leaderboardTbody.innerHTML = pageData.map((player, idx) => `
+                leaderboardTbody.innerHTML = pageData.map((player) => `
                     <tr>
-                        <td>${start + idx + 1}</td>
+                        <td>${player.rank}</td>
                         <td>${player.name}</td>
                         <td><strong>${player.total}</strong></td>
                         <td>${player.count}</td>
