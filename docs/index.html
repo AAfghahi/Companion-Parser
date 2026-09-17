@@ -814,6 +814,23 @@
             reports.push(formData);
             localStorage.setItem('scoreReports', JSON.stringify(reports));
 
+            // Send email via Formspree
+            fetch('https://formspree.io/f/mggyzwby', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    'Player Name': formData.playerName,
+                    'Week': formData.week,
+                    'Current Score': formData.currentScore,
+                    'Expected Score': formData.expectedScore,
+                    'Reason': formData.reason,
+                    'Contact': formData.contact || 'Not provided',
+                    'Submitted': formData.timestamp
+                })
+            }).catch(err => console.log('Email sent (or offline)', err));
+
             // Show success message
             document.querySelector('.success-message').style.display = 'block';
             document.getElementById('reportForm').reset();
