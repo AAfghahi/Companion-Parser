@@ -877,7 +877,13 @@
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(discordMessage)
-            }).catch(err => console.log('Discord notification sent', err));
+            }).then(response => {
+                if (!response.ok) {
+                    console.error('Discord webhook failed:', response.status, response.statusText);
+                } else {
+                    console.log('Discord message sent successfully');
+                }
+            }).catch(err => console.error('Discord notification error:', err));
 
             // Show success message
             document.querySelector('.success-message').style.display = 'block';
@@ -945,7 +951,7 @@
 
                 <div class="form-group">
                     <label for="contact">Contact Info (optional)</label>
-                    <input type="email" id="contact" placeholder="Your email or Discord username">
+                    <input type="text" id="contact" placeholder="Your email or Discord username">
                 </div>
 
                 <div class="form-actions">
