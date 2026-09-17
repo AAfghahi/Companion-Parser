@@ -216,10 +216,11 @@ const SCRIPT_URL = 'YOUR_DEPLOYMENT_URL_HERE';
 ## Step 7: Viewing Your Tracker
 
 ### Current Season Dashboard (`index.html`)
-- Shows aggregated totals across all weeks
-- Pagination: 10 players per page
-- Search: Find players by name with autocomplete
-- Filter: View top performers for a specific week
+- **Weekly Scores Table**: Shows each player's score for the most recent week
+- **Leaderboard**: Shows aggregated totals across all weeks
+- **Pagination**: 10 players per page on both tables
+- **Search**: Find players by name with autocomplete
+- **Filter**: View top performers for a specific week
 
 ### Historical Seasons (`season-history.html`)
 - **Season Selector**: Dropdown to view any archived season
@@ -227,6 +228,84 @@ const SCRIPT_URL = 'YOUR_DEPLOYMENT_URL_HERE';
 - **Player Search**: Search for specific players with autocomplete
 - **Final Standings**: Displays leaderboard with OMW% as tiebreaker
 - **Statistics**: Shows total entries, unique players, and weeks tracked for each season
+
+## Step 8: Optional - Set Up Score Discrepancy Reporting with Discord
+
+The dashboard includes a built-in "Report Score Discrepancy" feature that allows users to report potential scoring errors. These reports can be automatically sent to your Discord server.
+
+### Setting Up Discord Webhooks
+
+1. **Create a Discord Server Channel** (or use existing)
+   - Go to your Discord server
+   - Create a new channel (e.g., #tournament-reports) or use an existing one
+   - Make sure the bot has permission to post messages
+
+2. **Create a Webhook**
+   - Right-click the channel → **Edit Channel**
+   - Go to **Integrations** → **Webhooks**
+   - Click **New Webhook**
+   - Name it something like "Tournament Tracker"
+   - Click **Copy Webhook URL** and save it
+
+3. **Update the HTML File**
+   - Open `docs/index.html` in a text editor
+   - Find the line with `fetch('https://discord.com/api/webhooks/...`
+   - Replace the entire URL with your webhook URL:
+   ```javascript
+   fetch('YOUR_DISCORD_WEBHOOK_URL_HERE', {
+   ```
+
+4. **Commit and push the change**
+   ```bash
+   git add docs/index.html
+   git commit -m "Add Discord webhook URL for score reports"
+   git push origin main
+   ```
+
+### How Users Report Discrepancies
+
+1. On the dashboard, click the **"Report Score Discrepancy"** button
+2. A form appears with fields for:
+   - **Your Name** (dropdown of all players)
+   - **Week** (dropdown of available weeks)
+   - **Current Score Shown** (auto-filled based on selected player/week)
+   - **Expected Score** (what it should be)
+   - **Reason** (explanation of the error)
+   - **Contact Info** (optional - email or Discord username)
+
+3. Click **Submit Report**
+4. The report is stored locally and sent to your Discord channel
+5. A success message confirms the submission
+
+### Discord Message Format
+
+Reports appear in Discord as formatted embeds showing:
+- Player name
+- Tournament week
+- Current and expected scores
+- Reason for discrepancy
+- Submitter contact information
+- Timestamp
+
+### Troubleshooting Discord Integration
+
+If reports don't appear in Discord:
+
+1. **Check the browser console** (F12)
+   - Look for error messages about the webhook
+   - Common error: 404 (webhook URL is wrong or expired)
+
+2. **Verify webhook URL**
+   - Make sure the full URL was copied correctly
+   - Check that the webhook hasn't been deleted in Discord
+
+3. **Check Discord permissions**
+   - Ensure the webhook has permission to post messages
+   - Verify the channel is accessible
+
+4. **Webhook expiration**
+   - Discord webhooks can expire; create a new one if reports stop working
+   - Keep a backup of your webhook URL
 
 ## Performance Features
 
@@ -316,9 +395,10 @@ If you have issues:
 
 Once set up, you can:
 
-- Integrate with Discord for automated notifications
+- **Set up Discord score discrepancy reporting** (see Step 8 above)
 - Create a scoring API for programmatic access
 - Add player profiles and historical stats
 - Generate season reports and statistics
+- Automate tournament data import with webhooks
 
 Enjoy tracking your tournaments!

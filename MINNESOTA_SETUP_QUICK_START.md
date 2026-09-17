@@ -502,12 +502,41 @@ In `docs/index.html`, look for `:root {` section and modify:
 - Check that sheet tab is named "MTG Standings"
 - Try refreshing website (Ctrl+Shift+R to clear cache)
 
+## Optional: Add Discord Score Report Channel
+
+Want your players to report scoring errors directly? Here's the quick setup:
+
+### Step 1: Create Discord Webhook
+1. In your Discord server, right-click a channel → **Edit Channel**
+2. Go to **Integrations** → **Webhooks** → **New Webhook**
+3. Name it "Tournament Tracker" 
+4. Click **Copy Webhook URL**
+
+### Step 2: Add Webhook to Your Website
+1. Open `docs/index.html` in a text editor
+2. Find the line starting with: `fetch('https://discord.com/api/webhooks/`
+3. Replace the entire URL with your webhook URL
+4. Save and commit:
+```bash
+git add docs/index.html
+git commit -m "Add Discord webhook for reports"
+git push origin main
+```
+
+### How It Works
+- Players click "Report Score Discrepancy" on the website
+- They submit a form with the issue
+- Report automatically posts to Discord
+- You get notified in real-time
+
+That's it! Your players can now report issues directly.
+
 ## Next Steps
 
 Once this is working, you can:
 - Add past season tabs (just create new sheets with season names)
 - Customize colors and styling
-- Add Discord notifications
+- Add more Discord features (auto-updates, etc.)
 - Share the website URL with your group!
 
 ---
