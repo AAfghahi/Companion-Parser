@@ -463,5 +463,71 @@
             loadData();
         }, 30000);
     </script>
+
+    <!-- Score Discrepancy Report Modal -->
+    <div id="reportModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Report Score Discrepancy</h2>
+                <button class="modal-close" onclick="closeReportModal()">×</button>
+            </div>
+
+            <div class="success-message">
+                ✓ Your report has been submitted successfully!
+            </div>
+
+            <form id="reportForm">
+                <div class="form-group">
+                    <label for="playerName">Your Name *</label>
+                    <select id="playerName" required>
+                        <option value="">Select your name</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="reportWeek">Week *</label>
+                    <select id="reportWeek" required>
+                        <option value="">Select a week</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="currentScore">Current Score Shown *</label>
+                    <input type="number" id="currentScore" placeholder="e.g., 12" readonly style="background-color: var(--bg-secondary); cursor: not-allowed;">
+                </div>
+
+                <div class="form-group">
+                    <label for="expectedScore">Expected Score *</label>
+                    <select id="expectedScore" required>
+                        <option value="">Select expected score</option>
+                        <option value="0">0</option>
+                        <option value="1">1</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="reason">Reason for Discrepancy *</label>
+                    <textarea id="reason" placeholder="Please explain what went wrong..." required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="contact">Contact Info (optional)</label>
+                    <input type="email" id="contact" placeholder="Your email or Discord username">
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="cancel" onclick="closeReportModal()">Cancel</button>
+                    <button type="submit">Submit Report</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </body>
 </html>
