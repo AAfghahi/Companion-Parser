@@ -207,6 +207,37 @@ def parse_date_string(date_str: str) -> datetime:
             raise ValueError(f"Invalid date format: {date_str}. Use M/D/YY or M/D/YYYY")
 
 
+def load_opt_out_list() -> List[str]:
+    """
+    Load the list of players who have opted out of data tracking.
+    Players are specified in the OPT_OUT_PLAYERS environment variable
+    as a comma-separated list of names (case-insensitive).
+
+    Example: OPT_OUT_PLAYERS="John Doe,Jane Smith"
+    """
+    opt_out_env = os.getenv('OPT_OUT_PLAYERS', '')
+    if not opt_out_env.strip():
+        return []
+    # Split by comma and clean up each name
+    opt_out_list = [name.strip().lower() for name in opt_out_env.split(',') if name.strip()]
+    return opt_out_list
+
+
+def filter_opt_out_players(standings: List[Dict[str, any]]) -> List[Dict[str, any]]:
+    """
+    Filter out players who have opted out of data tracking.
+    """
+    opt_out_list = load_opt_out_list()
+    if not opt_out_list:
+        return standings
+
+    filtered = [entry for entry in standings if entry['name'].lower() not in opt_out_list]
+    removed_count = len(standings) - len(filtered)
+    if removed_count > 0:
+        print(f"Filtered out {removed_count} opted-out player(s)")
+    return filtered
+
+
 def merge_standings(*files_list) -> List[Dict[str, any]]:
     """
     Merge standings from multiple sources, removing duplicates by name.
@@ -381,6 +412,9 @@ Examples:
     if args.store:
         for entry in all_standings:
             entry['store'] = args.store
+
+    # Filter out opted-out players
+    all_standings = filter_opt_out_players(all_standings)
 
     # Write Excel (main output format)
     include_omw = not args.no_omw

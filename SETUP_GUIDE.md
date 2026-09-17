@@ -149,6 +149,7 @@ The OCR script automatically:
 - Includes OMW% column in output by default
 - Generates Excel files for easy copying into Google Sheets
 - Removes emojis and special characters from player names
+- Filters out players on the opt-out list (see below)
 
 **Command examples:**
 ```bash
@@ -161,6 +162,35 @@ python screenshot_to_csv.py img1.png img2.png -o standings.xlsx
 # Without OMW% column (optional)
 python screenshot_to_csv.py screenshot.png --no-omw -o standings.xlsx
 ```
+
+### Player Privacy: Opt-Out List
+
+Players can opt out of having their data tracked by adding their name to the `OPT_OUT_PLAYERS` environment variable.
+
+**Setup:**
+
+1. Create or edit a `.env` file in your project directory:
+   ```
+   OPT_OUT_PLAYERS=John Doe,Jane Smith,Player Name
+   ```
+
+2. Load the environment variable before running the script:
+   
+   **On Mac/Linux:**
+   ```bash
+   export OPT_OUT_PLAYERS="John Doe,Jane Smith"
+   python screenshot_to_csv.py screenshot.png -o standings.xlsx
+   ```
+
+   **On Windows (PowerShell):**
+   ```powershell
+   $env:OPT_OUT_PLAYERS="John Doe,Jane Smith"
+   python screenshot_to_csv.py screenshot.png -o standings.xlsx
+   ```
+
+3. When the script runs, it will automatically filter out opted-out players from the output
+
+The opt-out list is case-insensitive, so "john doe" and "John Doe" will both be filtered.
 
 ## Step 5: Customize for Your Group
 

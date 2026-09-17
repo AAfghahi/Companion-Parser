@@ -471,6 +471,24 @@ Each tournament:
 3. Copy data to Google Sheet
 4. Website auto-updates in seconds
 
+## Player Privacy: Opt-Out List
+
+If any players don't want their data tracked, add them to an opt-out list:
+
+**On Mac/Linux:**
+```bash
+export OPT_OUT_PLAYERS="John Doe,Jane Smith"
+python screenshot_to_csv.py screenshot.png -o standings.xlsx
+```
+
+**On Windows (PowerShell):**
+```powershell
+$env:OPT_OUT_PLAYERS="John Doe,Jane Smith"
+python screenshot_to_csv.py screenshot.png -o standings.xlsx
+```
+
+The script will automatically exclude opted-out players from the output.
+
 ## Customizing Your Site
 
 ### Change the Name
