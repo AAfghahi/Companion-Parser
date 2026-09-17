@@ -21,6 +21,9 @@ function doGet(e) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const params = e && e.parameter ? e.parameter : {};
 
+  Logger.log('doGet called with params: ' + JSON.stringify(params));
+  Logger.log('listSeasons in params: ' + ('listSeasons' in params));
+
   // If season parameter is provided, read from that sheet
   if (params.season) {
     const seasonName = params.season;
@@ -40,14 +43,17 @@ function doGet(e) {
 
   // If listSeasons parameter is provided, return all sheet names
   if ('listSeasons' in params) {
+    Logger.log('Returning sheet names');
     const sheets = ss.getSheets();
     const seasonNames = sheets.map(sheet => sheet.getName());
+    Logger.log('Sheet names: ' + JSON.stringify(seasonNames));
 
     return ContentService.createTextOutput(JSON.stringify(seasonNames))
       .setMimeType(ContentService.MimeType.JSON);
   }
 
   // Default: read from current season sheet (MTG Standings)
+  Logger.log('Returning MTG Standings data');
   const sheet = initializeSheet();
   const data = sheet.getDataRange().getValues();
 
