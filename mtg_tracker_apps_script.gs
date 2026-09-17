@@ -21,8 +21,10 @@ function doGet(e) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const params = e && e.parameter ? e.parameter : {};
 
+  Logger.log('doGet called with e: ' + JSON.stringify(e));
   Logger.log('doGet called with params: ' + JSON.stringify(params));
   Logger.log('listSeasons in params: ' + ('listSeasons' in params));
+  Logger.log('params.listSeasons value: ' + params.listSeasons);
 
   // If season parameter is provided, read from that sheet
   if (params.season) {
@@ -42,7 +44,8 @@ function doGet(e) {
   }
 
   // If listSeasons parameter is provided, return all sheet names
-  if ('listSeasons' in params) {
+  // Try multiple ways to detect the parameter
+  if ('listSeasons' in params || params.listSeasons || (e && e.parameter && e.parameter.listSeasons)) {
     Logger.log('Returning sheet names');
     const sheets = ss.getSheets();
     const seasonNames = sheets.map(sheet => sheet.getName());
