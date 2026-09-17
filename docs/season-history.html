@@ -227,6 +227,37 @@
     <script>
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyiVH_4CPYMiKyL5CBrvLWk40flxccReKSt6q9ClZcN2xztAn_6IrCn6wIEwjArPgnlZQ/exec';
         let currentSeasonRows = [];
+        const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+        function getCacheKey(key) {
+            return `mtg_cache_${key}`;
+        }
+
+        function getCache(key) {
+            try {
+                const cached = localStorage.getItem(getCacheKey(key));
+                if (!cached) return null;
+                const { data, timestamp } = JSON.parse(cached);
+                if (Date.now() - timestamp > CACHE_DURATION) {
+                    localStorage.removeItem(getCacheKey(key));
+                    return null;
+                }
+                return data;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function setCache(key, data) {
+            try {
+                localStorage.setItem(getCacheKey(key), JSON.stringify({
+                    data,
+                    timestamp: Date.now()
+                }));
+            } catch (e) {
+                console.warn('Failed to cache data:', e);
+            }
+        }
 
         function formatDate(dateValue) {
             if (!dateValue) return '';
@@ -255,6 +286,16 @@
         }
 
         async function loadSeasons() {
+            const select = document.getElementById('seasonSelect');
+
+            // Try to load from cache first
+            const cached = getCache('seasons');
+            if (cached) {
+                console.log('Loading seasons from cache');
+                renderSeasons(cached, select);
+                return;
+            }
+
             try {
                 const url = SCRIPT_URL + '?listSeasons=true';
                 console.log('Fetching seasons from:', url);
@@ -264,15 +305,11 @@
                 console.log('Seasons response:', seasons);
                 console.log('Response type:', typeof seasons, 'Is array:', Array.isArray(seasons));
 
-                const select = document.getElementById('seasonSelect');
-
                 // Check if we got an array of strings (sheet names) or table data
                 if (Array.isArray(seasons) && typeof seasons[0] === 'string') {
                     // It's the correct format (array of sheet names)
-                    select.innerHTML = '<option value="">Choose a season...</option>' +
-                        seasons.filter(s => s !== 'MTG Standings').map(season =>
-                            `<option value="${season}">${season}</option>`
-                        ).join('');
+                    setCache('seasons', seasons);
+                    renderSeasons(seasons, select);
                 } else {
                     // It's returning table data - Apps Script not properly redeployed
                     console.error('ERROR: Apps Script is returning table data instead of season names.');
@@ -281,9 +318,24 @@
                 }
             } catch (error) {
                 console.error('Error loading seasons:', error);
-                document.getElementById('seasonSelect').innerHTML =
-                    '<option value="">Error loading seasons</option>';
+                // Try to use stale cache if available
+                const staleCache = localStorage.getItem(getCacheKey('seasons'));
+                if (staleCache) {
+                    try {
+                        const { data } = JSON.parse(staleCache);
+                        renderSeasons(data, select);
+                        return;
+                    } catch (e) {}
+                }
+                select.innerHTML = '<option value="">Error loading seasons</option>';
             }
+        }
+
+        function renderSeasons(seasons, select) {
+            select.innerHTML = '<option value="">Choose a season...</option>' +
+                seasons.filter(s => s !== 'MTG Standings').map(season =>
+                    `<option value="${season}">${season}</option>`
+                ).join('');
         }
 
         async function loadSeason(seasonName) {
@@ -297,6 +349,17 @@
                 return;
             }
 
+            // Try to load from cache first
+            const cached = getCache(`season_${seasonName}`);
+            if (cached) {
+                console.log(`Loading season ${seasonName} from cache`);
+                currentSeasonRows = cached;
+                populateFilters(cached);
+                renderSeasonData(cached, seasonName);
+                updateStatistics(cached);
+                return;
+            }
+
             try {
                 const response = await fetch(SCRIPT_URL + '?season=' + encodeURIComponent(seasonName));
                 const rows = await response.json();
@@ -307,12 +370,25 @@
                     return;
                 }
 
+                setCache(`season_${seasonName}`, rows);
                 currentSeasonRows = rows;
                 populateFilters(rows);
                 renderSeasonData(rows, seasonName);
                 updateStatistics(rows);
             } catch (error) {
                 console.error('Error loading season:', error);
+                // Try to use stale cache if available
+                const staleCache = localStorage.getItem(getCacheKey(`season_${seasonName}`));
+                if (staleCache) {
+                    try {
+                        const { data } = JSON.parse(staleCache);
+                        currentSeasonRows = data;
+                        populateFilters(data);
+                        renderSeasonData(data, seasonName);
+                        updateStatistics(data);
+                        return;
+                    } catch (e) {}
+                }
                 document.getElementById('seasonContent').innerHTML =
                     '<div class="loading">Error loading season data</div>';
             }

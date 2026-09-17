@@ -240,6 +240,37 @@
 
     <script>
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyiVH_4CPYMiKyL5CBrvLWk40flxccReKSt6q9ClZcN2xztAn_6IrCn6wIEwjArPgnlZQ/exec';
+        const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+        function getCacheKey(key) {
+            return `mtg_cache_${key}`;
+        }
+
+        function getCache(key) {
+            try {
+                const cached = localStorage.getItem(getCacheKey(key));
+                if (!cached) return null;
+                const { data, timestamp } = JSON.parse(cached);
+                if (Date.now() - timestamp > CACHE_DURATION) {
+                    localStorage.removeItem(getCacheKey(key));
+                    return null;
+                }
+                return data;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function setCache(key, data) {
+            try {
+                localStorage.setItem(getCacheKey(key), JSON.stringify({
+                    data,
+                    timestamp: Date.now()
+                }));
+            } catch (e) {
+                console.warn('Failed to cache data:', e);
+            }
+        }
 
         function formatDate(dateValue) {
             if (!dateValue) return '';
@@ -274,34 +305,73 @@
         const itemsPerPage = 10;
 
         async function loadData() {
+            // Try to load from cache first
+            const cached = getCache('standings');
+            if (cached) {
+                console.log('Loading standings from cache');
+                allRowsData = cached;
+                renderDashboard();
+                populateFilters(cached);
+                updateStatistics(cached);
+                loadSeasonLink(); // Still load season link info
+                return;
+            }
+
             try {
                 const response = await fetch(SCRIPT_URL);
                 const rows = await response.json();
+                setCache('standings', rows);
                 allRowsData = rows;
                 renderDashboard();
                 populateFilters(rows);
                 updateStatistics(rows);
+                loadSeasonLink();
+            } catch (error) {
+                console.error('Error loading data:', error);
+                // Try to use stale cache if available
+                const staleCache = localStorage.getItem(getCacheKey('standings'));
+                if (staleCache) {
+                    try {
+                        const { data } = JSON.parse(staleCache);
+                        allRowsData = data;
+                        renderDashboard();
+                        populateFilters(data);
+                        updateStatistics(data);
+                        loadSeasonLink();
+                        return;
+                    } catch (e) {}
+                }
+                document.querySelector('#leaderboard tbody').innerHTML =
+                    '<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">Error loading data</td></tr>';
+            }
+        }
 
-                // Check if there are any historical seasons
-                try {
+        async function loadSeasonLink() {
+            try {
+                const cached = getCache('seasons');
+                let seasons = cached;
+
+                if (!seasons) {
                     const seasonsResponse = await fetch(SCRIPT_URL + '?listSeasons=true');
-                    const seasons = await seasonsResponse.json();
+                    seasons = await seasonsResponse.json();
+                    if (Array.isArray(seasons) && typeof seasons[0] === 'string') {
+                        setCache('seasons', seasons);
+                    }
+                }
+
+                if (Array.isArray(seasons) && typeof seasons[0] === 'string') {
                     const historicalSeasons = seasons.filter(s => s !== 'MTG Standings');
                     const seasonLink = document.querySelector('a[href="season-history.html"]');
                     if (seasonLink) {
                         seasonLink.style.display = historicalSeasons.length > 0 ? 'inline-block' : 'none';
                     }
-                } catch (e) {
-                    // If we can't load seasons, hide the link to be safe
-                    const seasonLink = document.querySelector('a[href="season-history.html"]');
-                    if (seasonLink) {
-                        seasonLink.style.display = 'none';
-                    }
                 }
-            } catch (error) {
-                console.error('Error loading data:', error);
-                document.querySelector('#leaderboard tbody').innerHTML =
-                    '<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">Error loading data</td></tr>';
+            } catch (e) {
+                // If we can't load seasons, hide the link to be safe
+                const seasonLink = document.querySelector('a[href="season-history.html"]');
+                if (seasonLink) {
+                    seasonLink.style.display = 'none';
+                }
             }
         }
 
@@ -521,7 +591,7 @@
 
         setInterval(() => {
             loadData();
-        }, 30000);
+        }, CACHE_DURATION);
     </script>
 </body>
 </html>
