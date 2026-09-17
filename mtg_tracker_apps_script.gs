@@ -39,7 +39,7 @@ function doGet(e) {
   }
 
   // If listSeasons parameter is provided, return all sheet names
-  if (params.listSeasons) {
+  if ('listSeasons' in params) {
     const sheets = ss.getSheets();
     const seasonNames = sheets.map(sheet => sheet.getName());
 
