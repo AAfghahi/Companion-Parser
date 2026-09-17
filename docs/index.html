@@ -455,9 +455,10 @@
                     return bOmw - aOmw;
                 });
 
-            // Apply search filter to weekly scores
+            // Apply search filter to weekly scores and leaderboard
             if (searchTerm) {
                 weeklyScoresData = weeklyScoresData.filter(p => p.name.toLowerCase().includes(searchTerm));
+                leaderboardData = leaderboardData.filter(p => p.name.toLowerCase().includes(searchTerm));
             }
 
             currentWeeklyPage = 1;
