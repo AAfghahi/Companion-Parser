@@ -835,7 +835,11 @@
             }
         }
 
-        document.getElementById('reportForm').addEventListener('submit', function(e) {
+        document.addEventListener('DOMContentLoaded', function() {
+            const reportForm = document.getElementById('reportForm');
+            if (!reportForm) return;
+
+            reportForm.addEventListener('submit', function(e) {
             e.preventDefault();
 
             const formData = {
@@ -893,6 +897,7 @@
             setTimeout(() => {
                 closeReportModal();
             }, 3000);
+            });
         });
     </script>
 
