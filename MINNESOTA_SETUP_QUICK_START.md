@@ -427,6 +427,23 @@ git push origin main
 
 That's it! Your website is live! 🎉
 
+## Features Your Site Includes
+
+### Current Season Dashboard
+- **Leaderboard** with total points across all weeks
+- **Weekly Filter** to view results for a specific week
+- **Player Search** with autocomplete
+- **Pagination** showing 10 players per page
+- **OMW% Tiebreaker** - when players have equal points
+
+### Historical Seasons Viewer
+- **Season Selector** dropdown to view past seasons
+- **Week Filter** to view a specific week's results
+- **Player Search** to find specific players
+- **Automatic Caching** for faster page loads (5-minute cache)
+
+All pages are responsive and work on phones, tablets, and desktops.
+
 ## Step 7: Add Your First Tournament Data
 
 1. Take a screenshot of the tournament standings (from MTG Companion or however you track it)
@@ -436,9 +453,14 @@ That's it! Your website is live! 🎉
 python screenshot_to_csv.py tournament_screenshot.png -d 9/21/26 -o standings.xlsx
 ```
 
+The script automatically:
+- Extracts player names, records, points, and OMW%
+- Calculates match points from the W-L-D record
+- Creates an Excel file ready to copy-paste
+
 4. Open the generated Excel file
-5. Copy the data (rows with player names, records, points)
-6. Go to your Google Sheet and paste it into "MTG Standings" sheet
+5. Copy all the data (including headers)
+6. Go to your Google Sheet and paste it into "MTG Standings" sheet (select cell A1)
 7. Refresh your website - it should show the data!
 
 ## Adding More Tournaments

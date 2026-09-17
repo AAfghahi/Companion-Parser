@@ -141,6 +141,27 @@ Before starting, you'll need:
    python screenshot_to_csv.py screenshot.png -o standings.xlsx -d 9/14/26
    ```
 
+### Script Features
+
+The OCR script automatically:
+- Extracts player names, records, points, and OMW% from screenshots
+- Calculates match points (Win = 3 points, Draw = 1 point, Loss = 0 points)
+- Includes OMW% column in output by default
+- Generates Excel files for easy copying into Google Sheets
+- Removes emojis and special characters from player names
+
+**Command examples:**
+```bash
+# Basic usage with date
+python screenshot_to_csv.py screenshot.png -d 9/14/26 -o standings.xlsx
+
+# Multiple screenshots (merged with duplicates removed)
+python screenshot_to_csv.py img1.png img2.png -o standings.xlsx
+
+# Without OMW% column (optional)
+python screenshot_to_csv.py screenshot.png --no-omw -o standings.xlsx
+```
+
 ## Step 5: Customize for Your Group
 
 ### Update the HTML Titles and Branding
@@ -201,9 +222,28 @@ const SCRIPT_URL = 'YOUR_DEPLOYMENT_URL_HERE';
 - Filter: View top performers for a specific week
 
 ### Historical Seasons (`season-history.html`)
-- Dropdown to select past seasons
-- Final standings for each season
-- Statistics (total entries, unique players, weeks tracked)
+- **Season Selector**: Dropdown to view any archived season
+- **Week Filter**: Filter standings to show only a specific week
+- **Player Search**: Search for specific players with autocomplete
+- **Final Standings**: Displays leaderboard with OMW% as tiebreaker
+- **Statistics**: Shows total entries, unique players, and weeks tracked for each season
+
+## Performance Features
+
+### Browser Caching
+The website automatically caches data locally in your browser with a 5-minute expiration:
+- **Faster page loads**: Switching between tabs loads cached data instantly
+- **Offline access**: If the API is temporarily unavailable, cached data is still shown
+- **Automatic refresh**: After 5 minutes, fresh data is fetched from the server
+- **Reduced server load**: Less frequent API calls to Google Apps Script
+
+This caching is automatic and requires no configuration.
+
+### OMW% (Opponent Match Win) Tiebreaker
+When players have equal points in the leaderboard:
+- Primary sort: Total points (highest first)
+- Secondary sort: OMW% (highest first)
+- This gives credit to players who faced stronger opponents
 
 ## Troubleshooting
 
