@@ -301,12 +301,16 @@
             rows.slice(1).forEach(row => {
                 const name = row[0];
                 const points = parseInt(row[2]) || 0;
+                const omw = row[4] ? parseFloat(row[4]) : null;
 
                 if (!playerStats[name]) {
-                    playerStats[name] = { total: 0, count: 0 };
+                    playerStats[name] = { total: 0, count: 0, omwValues: [] };
                 }
                 playerStats[name].total += points;
                 playerStats[name].count += 1;
+                if (omw !== null) {
+                    playerStats[name].omwValues.push(omw);
+                }
             });
 
             const leaderboard = Object.entries(playerStats)
@@ -314,9 +318,15 @@
                     name,
                     total: stats.total,
                     count: stats.count,
-                    avg: Math.round(stats.total / stats.count)
+                    avg: Math.round(stats.total / stats.count),
+                    avgOmw: stats.omwValues.length > 0 ? (stats.omwValues.reduce((a, b) => a + b, 0) / stats.omwValues.length).toFixed(1) : 'N/A'
                 }))
-                .sort((a, b) => b.total - a.total);
+                .sort((a, b) => {
+                    if (b.total !== a.total) return b.total - a.total;
+                    const aOmw = parseFloat(a.avgOmw) || 0;
+                    const bOmw = parseFloat(b.avgOmw) || 0;
+                    return bOmw - aOmw;
+                });
 
             const html = `
                 <h2>${seasonName} - Final Standings</h2>
@@ -329,6 +339,7 @@
                                 <th>Total Points</th>
                                 <th>Tournaments</th>
                                 <th>Avg Points</th>
+                                <th>OMW%</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -339,6 +350,7 @@
                                     <td><strong>${player.total}</strong></td>
                                     <td>${player.count}</td>
                                     <td>${player.avg}</td>
+                                    <td>${player.avgOmw}</td>
                                 </tr>
                             `).join('')}
                         </tbody>

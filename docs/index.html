@@ -197,6 +197,7 @@
                         <th>Total Points</th>
                         <th>Tournaments</th>
                         <th>Avg Points</th>
+                        <th>OMW%</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -219,6 +220,7 @@
                         <th>Total Points</th>
                         <th>Tournaments</th>
                         <th>Avg Points</th>
+                        <th>OMW%</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -302,13 +304,17 @@
                 const name = row[0];
                 const points = parseInt(row[2]) || 0;
                 const week = row[3] || '';
+                const omw = row[4] ? parseFloat(row[4]) : null;
 
                 if (!playerStats[name]) {
-                    playerStats[name] = { total: 0, count: 0, entries: [] };
+                    playerStats[name] = { total: 0, count: 0, omwValues: [], entries: [] };
                 }
                 playerStats[name].total += points;
                 playerStats[name].count += 1;
-                playerStats[name].entries.push({ points, week });
+                if (omw !== null) {
+                    playerStats[name].omwValues.push(omw);
+                }
+                playerStats[name].entries.push({ points, week, omw });
             });
 
             let leaderboardData = Object.entries(playerStats)
@@ -317,6 +323,7 @@
                     total: stats.total,
                     count: stats.count,
                     avg: Math.round(stats.total / stats.count),
+                    avgOmw: stats.omwValues.length > 0 ? (stats.omwValues.reduce((a, b) => a + b, 0) / stats.omwValues.length).toFixed(1) : 'N/A',
                     entries: stats.entries
                 }));
 
@@ -324,11 +331,22 @@
                 leaderboardData = leaderboardData.map(player => ({
                     ...player,
                     weekTotal: player.entries.filter(e => e.week === weekFilter).reduce((sum, e) => sum + e.points, 0),
-                    weekCount: player.entries.filter(e => e.week === weekFilter).length
+                    weekCount: player.entries.filter(e => e.week === weekFilter).length,
+                    weekOmw: player.entries.filter(e => e.week === weekFilter && e.omw).map(e => e.omw).join(', ') || 'N/A'
                 })).filter(player => player.weekCount > 0)
-                .sort((a, b) => b.weekTotal - a.weekTotal);
+                .sort((a, b) => {
+                    if (b.weekTotal !== a.weekTotal) return b.weekTotal - a.weekTotal;
+                    const aOmw = parseFloat(a.weekOmw) || 0;
+                    const bOmw = parseFloat(b.weekOmw) || 0;
+                    return bOmw - aOmw;
+                });
             } else {
-                leaderboardData.sort((a, b) => b.total - a.total);
+                leaderboardData.sort((a, b) => {
+                    if (b.total !== a.total) return b.total - a.total;
+                    const aOmw = parseFloat(a.avgOmw) || 0;
+                    const bOmw = parseFloat(b.avgOmw) || 0;
+                    return bOmw - aOmw;
+                });
             }
 
             if (searchTerm) {
@@ -355,6 +373,7 @@
                         <td><strong>${weekFilter ? player.weekTotal : player.total}</strong></td>
                         <td>${weekFilter ? player.weekCount : player.count}</td>
                         <td>${weekFilter ? (player.weekCount > 0 ? (player.weekTotal / player.weekCount).toFixed(1) : '0.0') : player.avg}</td>
+                        <td>${weekFilter ? player.weekOmw : player.avgOmw}</td>
                     </tr>
                 `).join('');
             }
@@ -388,6 +407,7 @@
                         <td><strong>${player.total}</strong></td>
                         <td>${player.count}</td>
                         <td>${player.avg}</td>
+                        <td>${player.avgOmw}</td>
                     </tr>
                 `).join('');
             }

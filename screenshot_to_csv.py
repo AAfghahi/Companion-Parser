@@ -138,12 +138,20 @@ def parse_standings(text: str) -> List[Dict[str, any]]:
             if points is None:
                 points = calculate_points(record)
 
+            # Extract OMW% if present (looks for percentage after record)
+            omw = None
+            if record_idx + 1 < len(parts):
+                potential_omw = parts[record_idx + 1]
+                omw_match = re.search(r'(\d+(?:\.\d+)?)\s*%', potential_omw)
+                if omw_match:
+                    omw = float(omw_match.group(1))
+
             if name and record:
                 standings.append({
                     'name': name.strip(),
                     'record': record,
                     'points': points,
-                    'omw': None  # Optional: could parse OMW% if needed
+                    'omw': omw
                 })
 
         except Exception as e:
@@ -217,7 +225,7 @@ def merge_standings(*files_list) -> List[Dict[str, any]]:
     return list(seen_names.values())
 
 
-def write_csv(standings: List[Dict[str, any]], output_path: str, include_omw: bool = False):
+def write_csv(standings: List[Dict[str, any]], output_path: str, include_omw: bool = True):
     """Write standings to CSV file."""
     if not standings:
         print("No data to write")
@@ -259,7 +267,7 @@ def write_json(standings: List[Dict[str, any]], output_path: str):
         print(f"Error writing JSON: {e}")
 
 
-def write_excel(standings: List[Dict[str, any]], output_path: str, include_omw: bool = False):
+def write_excel(standings: List[Dict[str, any]], output_path: str, include_omw: bool = True):
     """Write standings to Excel file."""
     if not standings:
         print("No data to write")
@@ -351,9 +359,9 @@ Examples:
     )
 
     parser.add_argument(
-        '--omw',
+        '--no-omw',
         action='store_true',
-        help='Include OMW%% column in output'
+        help='Exclude OMW%% column from output (default: included)'
     )
 
     args = parser.parse_args()
@@ -375,7 +383,8 @@ Examples:
             entry['store'] = args.store
 
     # Write Excel (main output format)
-    write_excel(all_standings, args.output, include_omw=args.omw)
+    include_omw = not args.no_omw
+    write_excel(all_standings, args.output, include_omw=include_omw)
 
     # Write JSON if requested
     if args.json:

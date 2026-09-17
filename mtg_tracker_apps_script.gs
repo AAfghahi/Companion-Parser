@@ -10,7 +10,7 @@ function initializeSheet() {
 
   if (!sheet) {
     sheet = ss.insertSheet(SHEET_NAME);
-    sheet.appendRow(['Name', 'Record', 'Points', 'Week', 'Store', 'Timestamp']);
+    sheet.appendRow(['Name', 'Record', 'Points', 'Week', 'OMW', 'Store', 'Timestamp']);
   }
 
   return sheet;
@@ -69,6 +69,7 @@ function doPost(e) {
           row.record || '',
           row.points || 0,
           row.week || '',
+          row.omw || '',
           row.store || '',
           new Date().toISOString()
         ]);
