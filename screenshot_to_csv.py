@@ -24,6 +24,10 @@ except ImportError:
     print("Please run: pip install -r requirements.txt")
     sys.exit(1)
 
+# Player opt-out list - players who don't want their data represented
+# Can be overridden by OPT_OUT_PLAYERS environment variable
+OPT_OUT_PLAYERS: List[str] = []
+
 
 def clean_name(name: str) -> str:
     """
@@ -210,17 +214,23 @@ def parse_date_string(date_str: str) -> datetime:
 def load_opt_out_list() -> List[str]:
     """
     Load the list of players who have opted out of data tracking.
-    Players are specified in the OPT_OUT_PLAYERS environment variable
-    as a comma-separated list of names (case-insensitive).
+    Players can be specified two ways:
+    1. OPT_OUT_PLAYERS environment variable (comma-separated list)
+    2. OPT_OUT_PLAYERS global variable (list of strings)
 
+    Environment variable takes precedence if set.
     Example: OPT_OUT_PLAYERS="John Doe,Jane Smith"
     """
+    global OPT_OUT_PLAYERS
+
+    # Check environment variable first
     opt_out_env = os.getenv('OPT_OUT_PLAYERS', '')
-    if not opt_out_env.strip():
-        return []
-    # Split by comma and clean up each name
-    opt_out_list = [name.strip().lower() for name in opt_out_env.split(',') if name.strip()]
-    return opt_out_list
+    if opt_out_env.strip():
+        # Split by comma and clean up each name
+        return [name.strip().lower() for name in opt_out_env.split(',') if name.strip()]
+
+    # Fall back to global variable (convert to lowercase for comparison)
+    return [name.lower() for name in OPT_OUT_PLAYERS]
 
 
 def filter_opt_out_players(standings: List[Dict[str, any]]) -> List[Dict[str, any]]:
