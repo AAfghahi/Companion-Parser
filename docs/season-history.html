@@ -248,14 +248,29 @@
 
         async function loadSeasons() {
             try {
-                const response = await fetch(SCRIPT_URL + '?listSeasons=true');
+                const url = SCRIPT_URL + '?listSeasons=true';
+                console.log('Fetching seasons from:', url);
+                const response = await fetch(url);
                 const seasons = await response.json();
 
+                console.log('Seasons response:', seasons);
+                console.log('Response type:', typeof seasons, 'Is array:', Array.isArray(seasons));
+
                 const select = document.getElementById('seasonSelect');
-                select.innerHTML = '<option value="">Choose a season...</option>' +
-                    seasons.filter(s => s !== 'MTG Standings').map(season =>
-                        `<option value="${season}">${season}</option>`
-                    ).join('');
+
+                // Check if we got an array of strings (sheet names) or table data
+                if (Array.isArray(seasons) && typeof seasons[0] === 'string') {
+                    // It's the correct format (array of sheet names)
+                    select.innerHTML = '<option value="">Choose a season...</option>' +
+                        seasons.filter(s => s !== 'MTG Standings').map(season =>
+                            `<option value="${season}">${season}</option>`
+                        ).join('');
+                } else {
+                    // It's returning table data - Apps Script not properly redeployed
+                    console.error('ERROR: Apps Script is returning table data instead of season names.');
+                    console.error('Make sure you have redeployed the Apps Script!');
+                    select.innerHTML = '<option value="">Error: Please redeploy Apps Script</option>';
+                }
             } catch (error) {
                 console.error('Error loading seasons:', error);
                 document.getElementById('seasonSelect').innerHTML =
