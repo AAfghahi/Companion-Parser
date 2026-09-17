@@ -281,6 +281,23 @@
                 renderDashboard();
                 populateFilters(rows);
                 updateStatistics(rows);
+
+                // Check if there are any historical seasons
+                try {
+                    const seasonsResponse = await fetch(SCRIPT_URL + '?listSeasons=true');
+                    const seasons = await seasonsResponse.json();
+                    const historicalSeasons = seasons.filter(s => s !== 'MTG Standings');
+                    const seasonLink = document.querySelector('a[href="season-history.html"]');
+                    if (seasonLink) {
+                        seasonLink.style.display = historicalSeasons.length > 0 ? 'inline-block' : 'none';
+                    }
+                } catch (e) {
+                    // If we can't load seasons, hide the link to be safe
+                    const seasonLink = document.querySelector('a[href="season-history.html"]');
+                    if (seasonLink) {
+                        seasonLink.style.display = 'none';
+                    }
+                }
             } catch (error) {
                 console.error('Error loading data:', error);
                 document.querySelector('#leaderboard tbody').innerHTML =
