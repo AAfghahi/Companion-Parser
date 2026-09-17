@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Colorado Pauper - Season History</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --border: #e0e0e0;
+            --accent: #6366f1;
+            --success: #10b981;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-primary: #1a1a1a;
+                --bg-secondary: #2d2d2d;
+                --text-primary: #ffffff;
+                --text-secondary: #b0b0b0;
+                --border: #404040;
+                --accent: #818cf8;
+            }
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95em;
+        }
+
+        .nav-links {
+            margin-top: 15px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .nav-links a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+
+        h2 {
+            margin-top: 30px;
+            margin-bottom: 20px;
+        }
+
+        .filter-section {
+            background: var(--bg-secondary);
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-section label {
+            display: inline-block;
+            margin: 0;
+            font-weight: 500;
+        }
+
+        .filter-section select,
+        .filter-section input {
+            flex: 1;
+            min-width: 150px;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 1em;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .filter-section select:focus,
+        .filter-section input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin-bottom: 30px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-secondary);
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background: var(--bg-secondary);
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        tr:hover {
+            background: var(--bg-primary);
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--accent);
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            margin-top: 5px;
+        }
+
+        .pagination-controls button {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 0.95em;
+        }
+
+        .pagination-controls button:hover:not(:disabled) {
+            background-color: var(--accent);
+            color: white;
+        }
+
+        .pagination-controls button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧙‍♂️ Colorado Pauper - Season History</h1>
+            <p class="subtitle">View past tournament seasons and standings</p>
+            <div class="nav-links">
+                <a href="index.html">← Back to Current Season</a>
+            </div>
+        </header>
+
+        <div class="filter-section">
+            <label for="seasonSelect">Select Season:</label>
+            <select id="seasonSelect">
+                <option value="">Loading seasons...</option>
+            </select>
+        </div>
+
+        <div id="seasonContent">
+            <div class="loading">Select a season to view data</div>
+        </div>
+
+        <div class="stat-card" id="statsCard" style="display: none;">
+            <div class="stat-label">Season Statistics</div>
+            <div style="margin-top: 10px;">
+                <p>Total Entries: <span id="totalEntries">0</span></p>
+                <p>Unique Players: <span id="uniquePlayers">0</span></p>
+                <p>Weeks Tracked: <span id="weeksTracked">0</span></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyiVH_4CPYMiKyL5CBrvLWk40flxccReKSt6q9ClZcN2xztAn_6IrCn6wIEwjArPgnlZQ/exec';
+
+        function formatDate(dateValue) {
+            if (!dateValue) return '';
+
+            if (typeof dateValue === 'string' && /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(dateValue)) {
+                return dateValue;
+            }
+
+            let date;
+            if (typeof dateValue === 'string' && dateValue.includes('T')) {
+                date = new Date(dateValue);
+            } else if (typeof dateValue === 'number') {
+                date = new Date(dateValue);
+            } else if (dateValue instanceof Date) {
+                date = dateValue;
+            } else {
+                return String(dateValue);
+            }
+
+            if (isNaN(date.getTime())) return String(dateValue);
+
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+            const year = date.getFullYear().toString().slice(-2);
+            return `${month}/${day}/${year}`;
+        }
+
+        async function loadSeasons() {
+            try {
+                const response = await fetch(SCRIPT_URL + '?listSeasons=true');
+                const seasons = await response.json();
+
+                const select = document.getElementById('seasonSelect');
+                select.innerHTML = '<option value="">Choose a season...</option>' +
+                    seasons.filter(s => s !== 'MTG Standings').map(season =>
+                        `<option value="${season}">${season}</option>`
+                    ).join('');
+            } catch (error) {
+                console.error('Error loading seasons:', error);
+                document.getElementById('seasonSelect').innerHTML =
+                    '<option value="">Error loading seasons</option>';
+            }
+        }
+
+        async function loadSeason(seasonName) {
+            if (!seasonName) {
+                document.getElementById('seasonContent').innerHTML =
+                    '<div class="loading">Select a season to view data</div>';
+                document.getElementById('statsCard').style.display = 'none';
+                return;
+            }
+
+            try {
+                const response = await fetch(SCRIPT_URL + '?season=' + encodeURIComponent(seasonName));
+                const rows = await response.json();
+
+                if (rows.success === false) {
+                    document.getElementById('seasonContent').innerHTML =
+                        '<div class="loading">Season not found</div>';
+                    return;
+                }
+
+                renderSeasonData(rows, seasonName);
+                updateStatistics(rows);
+            } catch (error) {
+                console.error('Error loading season:', error);
+                document.getElementById('seasonContent').innerHTML =
+                    '<div class="loading">Error loading season data</div>';
+            }
+        }
+
+        function renderSeasonData(rows, seasonName) {
+            if (rows.length <= 1) {
+                document.getElementById('seasonContent').innerHTML =
+                    '<div class="loading">No data for this season</div>';
+                return;
+            }
+
+            const playerStats = {};
+            rows.slice(1).forEach(row => {
+                const name = row[0];
+                const points = parseInt(row[2]) || 0;
+                const omw = row[4] ? parseFloat(row[4]) : null;
+
+                if (!playerStats[name]) {
+                    playerStats[name] = { total: 0, count: 0, omwValues: [] };
+                }
+                playerStats[name].total += points;
+                playerStats[name].count += 1;
+                if (omw !== null) {
+                    playerStats[name].omwValues.push(omw);
+                }
+            });
+
+            const leaderboard = Object.entries(playerStats)
+                .map(([name, stats]) => ({
+                    name,
+                    total: stats.total,
+                    count: stats.count,
+                    avg: Math.round(stats.total / stats.count),
+                    avgOmw: stats.omwValues.length > 0 ? (stats.omwValues.reduce((a, b) => a + b, 0) / stats.omwValues.length).toFixed(1) : 'N/A'
+                }))
+                .sort((a, b) => {
+                    if (b.total !== a.total) return b.total - a.total;
+                    const aOmw = parseFloat(a.avgOmw) || 0;
+                    const bOmw = parseFloat(b.avgOmw) || 0;
+                    return bOmw - aOmw;
+                });
+
+            const html = `
+                <h2>${seasonName} - Final Standings</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Player Name</th>
+                                <th>Total Points</th>
+                                <th>Tournaments</th>
+                                <th>Avg Points</th>
+                                <th>OMW%</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${leaderboard.map((player, idx) => `
+                                <tr>
+                                    <td>${idx + 1}</td>
+                                    <td>${player.name}</td>
+                                    <td><strong>${player.total}</strong></td>
+                                    <td>${player.count}</td>
+                                    <td>${player.avg}</td>
+                                    <td>${player.avgOmw}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            document.getElementById('seasonContent').innerHTML = html;
+        }
+
+        function updateStatistics(rows) {
+            const dataRows = rows.slice(1);
+            const uniquePlayers = new Set(dataRows.map(r => r[0])).size;
+            const weeks = new Set(dataRows.map(r => r[3])).size;
+
+            document.getElementById('totalEntries').textContent = dataRows.length;
+            document.getElementById('uniquePlayers').textContent = uniquePlayers;
+            document.getElementById('weeksTracked').textContent = weeks;
+            document.getElementById('statsCard').style.display = 'block';
+        }
+
+        document.getElementById('seasonSelect').addEventListener('change', (e) => {
+            loadSeason(e.target.value);
+        });
+
+        window.addEventListener('load', () => {
+            loadSeasons();
+        });
+    </script>
+</body>
+</html>
