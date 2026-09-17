@@ -814,22 +814,31 @@
             reports.push(formData);
             localStorage.setItem('scoreReports', JSON.stringify(reports));
 
-            // Send email via Formspree
-            fetch('https://formspree.io/f/mggyzwby', {
+            // Send to Discord webhook
+            const discordMessage = {
+                embeds: [{
+                    title: '⚠️ Score Discrepancy Report',
+                    color: 0xf59e0b,
+                    fields: [
+                        { name: 'Player Name', value: formData.playerName, inline: true },
+                        { name: 'Week', value: formData.week, inline: true },
+                        { name: 'Current Score', value: formData.currentScore, inline: true },
+                        { name: 'Expected Score', value: formData.expectedScore, inline: true },
+                        { name: 'Reason', value: formData.reason, inline: false },
+                        { name: 'Contact', value: formData.contact || 'Not provided', inline: true },
+                        { name: 'Submitted', value: new Date(formData.timestamp).toLocaleString(), inline: true }
+                    ],
+                    footer: { text: 'Colorado Pauper Tournament Tracker' }
+                }]
+            };
+
+            fetch('https://discord.com/api/webhooks/1550165206129311765/PqURo0K0NLaAMmCbxqcru2cSMHROUpWbeFV2qxTBAlkgJun81ll-dMmGDI--FbyqccC-', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    'Player Name': formData.playerName,
-                    'Week': formData.week,
-                    'Current Score': formData.currentScore,
-                    'Expected Score': formData.expectedScore,
-                    'Reason': formData.reason,
-                    'Contact': formData.contact || 'Not provided',
-                    'Submitted': formData.timestamp
-                })
-            }).catch(err => console.log('Email sent (or offline)', err));
+                body: JSON.stringify(discordMessage)
+            }).catch(err => console.log('Discord notification sent', err));
 
             // Show success message
             document.querySelector('.success-message').style.display = 'block';
