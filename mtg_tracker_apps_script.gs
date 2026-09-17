@@ -18,6 +18,35 @@ function initializeSheet() {
 
 // Handle GET requests (for loading data)
 function doGet(e) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // If season parameter is provided, read from that sheet
+  if (e.parameter && e.parameter.season) {
+    const seasonName = e.parameter.season;
+    const sheet = ss.getSheetByName(seasonName);
+
+    if (!sheet) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        message: 'Season not found: ' + seasonName
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    const data = sheet.getDataRange().getValues();
+    return ContentService.createTextOutput(JSON.stringify(data))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // If listSeasons parameter is provided, return all sheet names
+  if (e.parameter && e.parameter.listSeasons) {
+    const sheets = ss.getSheets();
+    const seasonNames = sheets.map(sheet => sheet.getName());
+
+    return ContentService.createTextOutput(JSON.stringify(seasonNames))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Default: read from current season sheet (MTG Standings)
   const sheet = initializeSheet();
   const data = sheet.getDataRange().getValues();
 
