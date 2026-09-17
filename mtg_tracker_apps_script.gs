@@ -19,10 +19,11 @@ function initializeSheet() {
 // Handle GET requests (for loading data)
 function doGet(e) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const params = e && e.parameter ? e.parameter : {};
 
   // If season parameter is provided, read from that sheet
-  if (e.parameter && e.parameter.season) {
-    const seasonName = e.parameter.season;
+  if (params.season) {
+    const seasonName = params.season;
     const sheet = ss.getSheetByName(seasonName);
 
     if (!sheet) {
@@ -38,7 +39,7 @@ function doGet(e) {
   }
 
   // If listSeasons parameter is provided, return all sheet names
-  if (e.parameter && e.parameter.listSeasons) {
+  if (params.listSeasons) {
     const sheets = ss.getSheets();
     const seasonNames = sheets.map(sheet => sheet.getName());
 
