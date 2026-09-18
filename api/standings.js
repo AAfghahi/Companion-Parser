@@ -1,4 +1,8 @@
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwjPEX1hKkJfgfbgUSvWJ7DuMmQrOhlDMknhrkwSvId3QGp2JCeR3i9ligKTZCGJWnojQ/exec';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -10,46 +14,42 @@ export default async function handler(req, res) {
   }
 
   try {
-    const params = new URLSearchParams();
-
+    // List archived seasons
     if (req.query.listSeasons) {
-      params.append('listSeasons', 'true');
+      const { data, error } = await supabase
+        .from('seasons')
+        .select('season_name')
+        .eq('is_current', false)
+        .order('season_name', { ascending: false });
+
+      if (error) throw error;
+      return res.status(200).json(data.map(row => row.season_name));
     }
 
+    // Get specific season data (archived)
     if (req.query.season) {
-      params.append('season', req.query.season);
+      const { data, error } = await supabase
+        .from('season_data')
+        .select('name, record, points, week, omwPercent')
+        .eq('season_name', req.query.season)
+        .order('week', { ascending: false });
+
+      if (error) throw error;
+      return res.status(200).json(data);
     }
 
-    const url = `${GOOGLE_SCRIPT_URL}?${params.toString()}`;
-    console.log(`Fetching: ${url}`);
+    // Get current standings
+    const { data, error } = await supabase
+      .from('standings')
+      .select('name, record, points, week, omwPercent')
+      .order('week', { ascending: false });
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 25000);
-
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: { 'Accept': 'application/json' },
-      signal: controller.signal
-    });
-
-    clearTimeout(timeoutId);
-    console.log(`Status: ${response.status}`);
-
-    if (!response.ok) {
-      const text = await response.text();
-      console.error(`Error from Google Apps Script: ${text.substring(0, 200)}`);
-      return res.status(502).json({
-        error: 'Failed to fetch from Google Apps Script',
-        status: response.status
-      });
-    }
-
-    const data = await response.json();
+    if (error) throw error;
     return res.status(200).json(data);
 
   } catch (error) {
-    console.error('API Error:', error.message);
-    return res.status(502).json({
+    console.error('Supabase Error:', error.message);
+    return res.status(500).json({
       error: error.message || 'Failed to fetch data'
     });
   }

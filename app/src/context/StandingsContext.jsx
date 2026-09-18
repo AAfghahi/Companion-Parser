@@ -63,20 +63,14 @@ export function StandingsProvider({ children }) {
 
       // Fetch from API
       const response = await fetch(API_URL);
-      const rawData = await response.json();
+      const data = await response.json();
 
-      // Map raw data to object format, skipping header row
-      const data = rawData.slice(1).map(row => ({
-        name: row[0] || '',
-        record: row[1] || '',
-        points: parseInt(row[2]) || 0,
-        week: row[3] || '',
-        omwPercent: row[4] || ''
-      }));
+      // Data is already in object format from Supabase
+      const standings = Array.isArray(data) ? data : [];
 
-      setCache('standings', data);
-      setStandings(data);
-      return data;
+      setCache('standings', standings);
+      setStandings(standings);
+      return standings;
     } catch (err) {
       console.error('Error loading standings:', err);
       setError(err.message);
