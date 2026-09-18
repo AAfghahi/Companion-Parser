@@ -46,6 +46,7 @@ export default function SeasonHistory() {
         setLoading(true);
         const data = await loadSeason(selectedSeason);
         setSeasonData(data || []);
+        setWeekFilter('');
         setSearchPlayer('');
         setWeeklyPage(1);
         setLeaderboardPage(1);
@@ -59,7 +60,7 @@ export default function SeasonHistory() {
     if (weeks.length > 0 && !weekFilter) {
       setWeekFilter(weeks[0]);
     }
-  }, [weeks, weekFilter]);
+  }, [weeks]);
 
   const weeks = useMemo(() => {
     if (!seasonData.length) return [];
