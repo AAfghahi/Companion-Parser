@@ -18,9 +18,10 @@ export default function SeasonHistory() {
   useEffect(() => {
     const fetchSeasons = async () => {
       const data = await loadSeasons();
-      setSeasons(data || []);
-      if (data && data.length > 0) {
-        setSelectedSeason(data[0]);
+      const filtered = (data || []).filter(s => s !== 'Main Standings');
+      setSeasons(filtered);
+      if (filtered && filtered.length > 0) {
+        setSelectedSeason(filtered[0]);
       }
     };
     fetchSeasons();
@@ -44,18 +45,18 @@ export default function SeasonHistory() {
 
   const weeks = useMemo(() => {
     if (!seasonData.length) return [];
-    const uniqueWeeks = [...new Set(seasonData.map(s => s.week || s[3]))];
+    const uniqueWeeks = [...new Set(seasonData.slice(1).map(s => s.week || s[3]))];
     return uniqueWeeks.sort().reverse();
   }, [seasonData]);
 
   const allPlayers = useMemo(() => {
     if (!seasonData.length) return [];
-    const players = [...new Set(seasonData.map(s => s.name || s[0]))];
+    const players = [...new Set(seasonData.slice(1).map(s => s.name || s[0]))];
     return players.sort();
   }, [seasonData]);
 
   const filteredWeeklyData = useMemo(() => {
-    let data = seasonData.map(item => ({
+    let data = seasonData.slice(1).map(item => ({
       name: item.name || item[0],
       record: item.record || item[1],
       points: item.points || parseInt(item[2]),
@@ -87,7 +88,7 @@ export default function SeasonHistory() {
   const leaderboardData = useMemo(() => {
     const playerStats = {};
 
-    seasonData.forEach(entry => {
+    seasonData.slice(1).forEach(entry => {
       const name = entry.name || entry[0];
       const points = entry.points || parseInt(entry[2]);
 
