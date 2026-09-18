@@ -470,6 +470,7 @@
         let currentLeaderboardPage = 1;
         const itemsPerPage = 10;
         let lastLeaderboardData = [];
+        let lastWeeklyScoresData = [];
 
         async function loadData() {
             // Try to load from cache first
@@ -634,6 +635,7 @@
             currentWeeklyPage = 1;
             currentLeaderboardPage = 1;
             lastLeaderboardData = leaderboardData;
+            lastWeeklyScoresData = weeklyScoresData;
             renderLeaderboardPage(weeklyScoresData, weekFilter);
             renderLeaderboardTable(leaderboardData);
         }
@@ -756,13 +758,17 @@
         document.getElementById('prevPage').addEventListener('click', () => {
             if (currentWeeklyPage > 1) {
                 currentWeeklyPage--;
-                renderDashboard();
+                const weekFilter = document.getElementById('weekFilter').value;
+                renderLeaderboardPage(lastWeeklyScoresData, weekFilter);
             }
         });
 
         document.getElementById('nextPage').addEventListener('click', () => {
-            currentWeeklyPage++;
-            renderDashboard();
+            if (currentWeeklyPage < Math.ceil(lastWeeklyScoresData.length / itemsPerPage)) {
+                currentWeeklyPage++;
+                const weekFilter = document.getElementById('weekFilter').value;
+                renderLeaderboardPage(lastWeeklyScoresData, weekFilter);
+            }
         });
 
         document.getElementById('leaderboardPrevPage').addEventListener('click', () => {
