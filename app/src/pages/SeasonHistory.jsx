@@ -246,6 +246,7 @@ export default function SeasonHistory() {
                     <th>Total Points</th>
                     <th>Tournaments</th>
                     <th>Avg Points</th>
+                    <th>OMW%</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -257,11 +258,12 @@ export default function SeasonHistory() {
                         <td><strong>{player.total}</strong></td>
                         <td>{player.count}</td>
                         <td>{player.avg}</td>
+                        <td>{player.omwPercent || '-'}</td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
+                      <td colSpan="6" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
                         No data available
                       </td>
                     </tr>
