@@ -4,6 +4,19 @@ import '../styles/pages.css';
 
 const ITEMS_PER_PAGE = 10;
 
+const formatWeekDate = (dateStr) => {
+  if (!dateStr) return dateStr;
+
+  // Handle ISO timestamp format
+  if (dateStr.includes('T')) {
+    const date = new Date(dateStr);
+    return (date.getMonth() + 1) + '/' + date.getDate() + '/' + String(date.getFullYear()).slice(-2);
+  }
+
+  // Already formatted, return as-is
+  return dateStr;
+};
+
 export default function SeasonHistory() {
   const { loadSeasons, loadSeason } = useStandings();
   const [seasons, setSeasons] = useState([]);
@@ -33,7 +46,6 @@ export default function SeasonHistory() {
         setLoading(true);
         const data = await loadSeason(selectedSeason);
         setSeasonData(data || []);
-        setWeekFilter('');
         setSearchPlayer('');
         setWeeklyPage(1);
         setLeaderboardPage(1);
@@ -42,6 +54,12 @@ export default function SeasonHistory() {
     };
     fetchSeason();
   }, [selectedSeason, loadSeason]);
+
+  useEffect(() => {
+    if (weeks.length > 0 && !weekFilter) {
+      setWeekFilter(weeks[0]);
+    }
+  }, [weeks, weekFilter]);
 
   const weeks = useMemo(() => {
     if (!seasonData.length) return [];
@@ -162,9 +180,8 @@ export default function SeasonHistory() {
                   setWeeklyPage(1);
                 }}
               >
-                <option value="">All Weeks</option>
                 {weeks.map(week => (
-                  <option key={week} value={week}>{week}</option>
+                  <option key={week} value={week}>{formatWeekDate(week)}</option>
                 ))}
               </select>
 
