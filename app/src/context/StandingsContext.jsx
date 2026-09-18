@@ -57,8 +57,8 @@ export function StandingsProvider({ children }) {
       const response = await fetch(SCRIPT_URL);
       const rawData = await response.json();
 
-      // Map raw data to object format
-      const data = rawData.map(row => ({
+      // Map raw data to object format, skipping header row
+      const data = rawData.slice(1).map(row => ({
         name: row[0] || '',
         record: row[1] || '',
         points: parseInt(row[2]) || 0,
