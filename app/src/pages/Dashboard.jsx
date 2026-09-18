@@ -189,13 +189,16 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="container">
+    <>
       <header>
-        <h1>🧙‍♂️ Colorado Pauper</h1>
-        <p className="subtitle">Current season standings powered by Google Sheets</p>
+        <div className="container">
+          <h1>🧙‍♂️ Colorado Pauper</h1>
+          <p className="subtitle">Current season standings powered by Google Sheets</p>
+        </div>
       </header>
 
-      {/* Weekly Scores Section */}
+      <div className="container">
+        {/* Weekly Scores Section */}
       <h2>Weekly Scores</h2>
       <div className="filter-section">
         <label htmlFor="weekFilter">Week:</label>
@@ -443,6 +446,7 @@ export default function Dashboard() {
           </form>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
