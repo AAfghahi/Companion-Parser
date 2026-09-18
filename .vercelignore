@@ -5,3 +5,8 @@
 docs
 README.md
 MINNESOTA_SETUP_QUICK_START.md
+
+# Python files (not needed for Node.js deployment)
+requirements.txt
+screenshot_to_csv.py
+test_standings.py

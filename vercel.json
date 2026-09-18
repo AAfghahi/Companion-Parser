@@ -1,7 +1,7 @@
 {
-  "buildCommand": "npm install --prefix app && npm run build --prefix app",
+  "installCommand": "cd app && npm install",
+  "buildCommand": "cd app && npm run build",
   "outputDirectory": "app/dist",
-  "installCommand": "echo 'Installing in app directory...'",
   "functions": {
     "api/**/*.js": {
       "memory": 128,
