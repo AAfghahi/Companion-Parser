@@ -207,6 +207,7 @@ export default function Dashboard() {
             setWeeklyPage(1);
           }}
         >
+          {weeks.length === 0 && <option value="">Loading...</option>}
           {weeks.map(week => (
             <option key={week} value={week}>{formatWeekDate(week)}</option>
           ))}
