@@ -5,6 +5,19 @@ import '../styles/pages.css';
 const DISCORD_WEBHOOK = import.meta.env.VITE_DISCORD_WEBHOOK_URL || '';
 const ITEMS_PER_PAGE = 10;
 
+const formatWeekDate = (dateStr) => {
+  if (!dateStr) return dateStr;
+
+  // Handle ISO timestamp format
+  if (dateStr.includes('T')) {
+    const date = new Date(dateStr);
+    return (date.getMonth() + 1) + '/' + date.getDate() + '/' + String(date.getFullYear()).slice(-2);
+  }
+
+  // Already formatted, return as-is
+  return dateStr;
+};
+
 export default function Dashboard() {
   const { standings, loading, loadStandings } = useStandings();
   const [weekFilter, setWeekFilter] = useState('');
@@ -108,7 +121,7 @@ export default function Dashboard() {
     if (currentWeek && !weekFilter) {
       setWeekFilter(currentWeek);
     }
-  }, [currentWeek, weekFilter]);
+  }, [currentWeek]);
 
   const handleReportOpen = () => {
     setReportData({
@@ -195,7 +208,7 @@ export default function Dashboard() {
           }}
         >
           {weeks.map(week => (
-            <option key={week} value={week}>{week}</option>
+            <option key={week} value={week}>{formatWeekDate(week)}</option>
           ))}
         </select>
 
@@ -385,7 +398,7 @@ export default function Dashboard() {
               >
                 <option value="">-- Select a week --</option>
                 {weeks.map(week => (
-                  <option key={week} value={week}>{week}</option>
+                  <option key={week} value={week}>{formatWeekDate(week)}</option>
                 ))}
               </select>
             </div>
