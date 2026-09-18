@@ -1,14 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -19,6 +10,22 @@ export default async function handler(req, res) {
   }
 
   try {
+    const supabaseUrl = process.env.VITE_SUPABASE_URL;
+    const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
+
+    console.log('Supabase URL:', supabaseUrl ? 'set' : 'missing');
+    console.log('Supabase Key:', supabaseAnonKey ? 'set' : 'missing');
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return res.status(500).json({
+        error: 'Missing Supabase environment variables',
+        url: supabaseUrl ? 'set' : 'missing',
+        key: supabaseAnonKey ? 'set' : 'missing'
+      });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
     // List archived seasons
     if (req.query.listSeasons) {
       const { data, error } = await supabase
@@ -53,9 +60,10 @@ export default async function handler(req, res) {
     return res.status(200).json(data);
 
   } catch (error) {
-    console.error('Supabase Error:', error.message);
+    console.error('API Error:', error);
     return res.status(500).json({
-      error: error.message || 'Failed to fetch data'
+      error: error.message || 'Failed to fetch data',
+      details: error.toString()
     });
   }
 }
