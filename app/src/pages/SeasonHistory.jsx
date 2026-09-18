@@ -96,10 +96,17 @@ export default function SeasonHistory() {
     return leaderboard.map((player, idx) => ({ ...player, rank: idx + 1 }));
   }, [seasonData]);
 
+  const filteredLeaderboard = useMemo(() => {
+    if (!searchPlayer) return leaderboardData;
+    return leaderboardData.filter(player =>
+      player.name.toLowerCase().includes(searchPlayer.toLowerCase())
+    );
+  }, [leaderboardData, searchPlayer]);
+
   const paginatedLeaderboard = useMemo(() => {
     const start = (leaderboardPage - 1) * ITEMS_PER_PAGE;
-    return leaderboardData.slice(start, start + ITEMS_PER_PAGE);
-  }, [leaderboardData, leaderboardPage]);
+    return filteredLeaderboard.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredLeaderboard, leaderboardPage]);
 
   useEffect(() => {
     const fetchSeasons = async () => {
@@ -260,7 +267,7 @@ export default function SeasonHistory() {
               </table>
             </div>
 
-            {leaderboardData.length > ITEMS_PER_PAGE && (
+            {filteredLeaderboard.length > ITEMS_PER_PAGE && (
               <div className="pagination-controls">
                 <button onClick={() => setLeaderboardPage(1)} disabled={leaderboardPage === 1}>
                   ⬅ First
@@ -269,12 +276,12 @@ export default function SeasonHistory() {
                   ← Previous
                 </button>
                 <span id="leaderboardPageInfo">
-                  Page {leaderboardPage} of {Math.ceil(leaderboardData.length / ITEMS_PER_PAGE)}
+                  Page {leaderboardPage} of {Math.ceil(filteredLeaderboard.length / ITEMS_PER_PAGE)}
                 </span>
-                <button onClick={() => setLeaderboardPage(p => p + 1)} disabled={leaderboardPage >= Math.ceil(leaderboardData.length / ITEMS_PER_PAGE)}>
+                <button onClick={() => setLeaderboardPage(p => p + 1)} disabled={leaderboardPage >= Math.ceil(filteredLeaderboard.length / ITEMS_PER_PAGE)}>
                   Next →
                 </button>
-                <button onClick={() => setLeaderboardPage(Math.ceil(leaderboardData.length / ITEMS_PER_PAGE))} disabled={leaderboardPage >= Math.ceil(leaderboardData.length / ITEMS_PER_PAGE)}>
+                <button onClick={() => setLeaderboardPage(Math.ceil(filteredLeaderboard.length / ITEMS_PER_PAGE))} disabled={leaderboardPage >= Math.ceil(filteredLeaderboard.length / ITEMS_PER_PAGE)}>
                   Last ➡
                 </button>
               </div>
