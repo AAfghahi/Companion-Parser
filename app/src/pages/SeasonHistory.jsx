@@ -200,6 +200,9 @@ export default function SeasonHistory() {
 
             {filteredWeeklyData.length > ITEMS_PER_PAGE && (
               <div className="pagination-controls">
+                <button onClick={() => setWeeklyPage(1)} disabled={weeklyPage === 1}>
+                  ⬅ First
+                </button>
                 <button onClick={() => setWeeklyPage(p => p - 1)} disabled={weeklyPage === 1}>
                   ← Previous
                 </button>
@@ -208,6 +211,9 @@ export default function SeasonHistory() {
                 </span>
                 <button onClick={() => setWeeklyPage(p => p + 1)} disabled={weeklyPage >= Math.ceil(filteredWeeklyData.length / ITEMS_PER_PAGE)}>
                   Next →
+                </button>
+                <button onClick={() => setWeeklyPage(Math.ceil(filteredWeeklyData.length / ITEMS_PER_PAGE))} disabled={weeklyPage >= Math.ceil(filteredWeeklyData.length / ITEMS_PER_PAGE)}>
+                  Last ➡
                 </button>
               </div>
             )}
@@ -248,6 +254,9 @@ export default function SeasonHistory() {
 
             {leaderboardData.length > ITEMS_PER_PAGE && (
               <div className="pagination-controls">
+                <button onClick={() => setLeaderboardPage(1)} disabled={leaderboardPage === 1}>
+                  ⬅ First
+                </button>
                 <button onClick={() => setLeaderboardPage(p => p - 1)} disabled={leaderboardPage === 1}>
                   ← Previous
                 </button>
@@ -256,6 +265,9 @@ export default function SeasonHistory() {
                 </span>
                 <button onClick={() => setLeaderboardPage(p => p + 1)} disabled={leaderboardPage >= Math.ceil(leaderboardData.length / ITEMS_PER_PAGE)}>
                   Next →
+                </button>
+                <button onClick={() => setLeaderboardPage(Math.ceil(leaderboardData.length / ITEMS_PER_PAGE))} disabled={leaderboardPage >= Math.ceil(leaderboardData.length / ITEMS_PER_PAGE)}>
+                  Last ➡
                 </button>
               </div>
             )}
