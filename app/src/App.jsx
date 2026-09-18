@@ -8,9 +8,11 @@ import Rules from './pages/Rules';
 import './App.css';
 
 function App() {
+  const basename = import.meta.env.BASE_URL;
+
   return (
     <StandingsProvider>
-      <Router basename="/Companion-Parser">
+      <Router basename={basename}>
         <Navigation />
         <Routes>
           <Route path="/" element={<Dashboard />} />
