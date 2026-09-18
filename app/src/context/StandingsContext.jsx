@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 
 const StandingsContext = createContext();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION = parseInt(import.meta.env.VITE_CACHE_DURATION_MS || '28800000', 10); // 8 hours default
 const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbyiVH_4CPYMiKyL5CBrvLWk40flxccReKSt6q9ClZcN2xztAn_6IrCn6wIEwjArPgnlZQ/exec';
 
 export function StandingsProvider({ children }) {
