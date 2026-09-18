@@ -121,176 +121,181 @@ export default function SeasonHistory() {
   }, [leaderboardData, leaderboardPage]);
 
   return (
-    <div className="container">
+    <>
       <header>
-        <h1>🧙‍♂️ Colorado Pauper</h1>
-        <p className="subtitle">Past season standings powered by Google Sheets</p>
+        <div className="container">
+          <h1>🧙‍♂️ Colorado Pauper</h1>
+          <p className="subtitle">Past season standings</p>
+        </div>
       </header>
 
-      <div className="filter-section">
-        <label htmlFor="seasonSelect">Season:</label>
-        <select
-          id="seasonSelect"
-          value={selectedSeason}
-          onChange={(e) => setSelectedSeason(e.target.value)}
-        >
-          {seasons.map(season => (
-            <option key={season} value={season}>{season}</option>
-          ))}
-        </select>
-      </div>
-
-      {loading ? (
-        <div className="loading">
-          <p>Loading season data...</p>
+      <div className="container">
+        <div className="filter-section">
+          <label htmlFor="seasonSelect">Season:</label>
+          <select
+            id="seasonSelect"
+            value={selectedSeason}
+            onChange={(e) => setSelectedSeason(e.target.value)}
+          >
+            {seasons.map(season => (
+              <option key={season} value={season}>{season}</option>
+            ))}
+          </select>
         </div>
-      ) : (
-        <>
-          <h2>Weekly Scores</h2>
-          <div className="filter-section">
-            <label htmlFor="weekFilter">Week:</label>
-            <select
-              id="weekFilter"
-              value={weekFilter}
-              onChange={(e) => {
-                setWeekFilter(e.target.value);
-                setWeeklyPage(1);
-              }}
-            >
-              <option value="">All Weeks</option>
-              {weeks.map(week => (
-                <option key={week} value={week}>{week}</option>
-              ))}
-            </select>
 
-            <label htmlFor="searchPlayer">Search Player:</label>
-            <input
-              type="text"
-              id="searchPlayer"
-              placeholder="Start typing a player name..."
-              value={searchPlayer}
-              onChange={(e) => {
-                setSearchPlayer(e.target.value);
-                setWeeklyPage(1);
-              }}
-              list="playerNames"
-              autoComplete="off"
-            />
-            <datalist id="playerNames">
-              {allPlayers.map(player => (
-                <option key={player} value={player} />
-              ))}
-            </datalist>
+        {loading ? (
+          <div className="loading">
+            <div className="spinner"></div>
+            <p>Loading season data...</p>
           </div>
-
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Rank</th>
-                  <th>Player Name</th>
-                  <th>Points</th>
-                  <th>Record</th>
-                  <th>OMW%</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedWeekly.length > 0 ? (
-                  paginatedWeekly.map(entry => (
-                    <tr key={`${entry.name}-${entry.week}`}>
-                      <td>{entry.rank}</td>
-                      <td>{entry.name}</td>
-                      <td><strong>{entry.points}</strong></td>
-                      <td>{entry.record || '-'}</td>
-                      <td>{entry.omwPercent || '-'}</td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
-                      No data available
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {filteredWeeklyData.length > ITEMS_PER_PAGE && (
-            <div className="pagination-controls">
-              <button
-                onClick={() => setWeeklyPage(p => p - 1)}
-                disabled={weeklyPage === 1}
+        ) : (
+          <>
+            <h2>Weekly Scores</h2>
+            <div className="filter-section">
+              <label htmlFor="weekFilter">Week:</label>
+              <select
+                id="weekFilter"
+                value={weekFilter}
+                onChange={(e) => {
+                  setWeekFilter(e.target.value);
+                  setWeeklyPage(1);
+                }}
               >
-                ← Previous
-              </button>
-              <span id="pageInfo">
-                Page {weeklyPage} of {Math.ceil(filteredWeeklyData.length / ITEMS_PER_PAGE)}
-              </span>
-              <button
-                onClick={() => setWeeklyPage(p => p + 1)}
-                disabled={weeklyPage >= Math.ceil(filteredWeeklyData.length / ITEMS_PER_PAGE)}
-              >
-                Next →
-              </button>
+                <option value="">All Weeks</option>
+                {weeks.map(week => (
+                  <option key={week} value={week}>{week}</option>
+                ))}
+              </select>
+
+              <label htmlFor="searchPlayer">Search Player:</label>
+              <input
+                type="text"
+                id="searchPlayer"
+                placeholder="Start typing a player name..."
+                value={searchPlayer}
+                onChange={(e) => {
+                  setSearchPlayer(e.target.value);
+                  setWeeklyPage(1);
+                }}
+                list="playerNames"
+                autoComplete="off"
+              />
+              <datalist id="playerNames">
+                {allPlayers.map(player => (
+                  <option key={player} value={player} />
+                ))}
+              </datalist>
             </div>
-          )}
 
-          <h2>Leaderboard</h2>
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Rank</th>
-                  <th>Player</th>
-                  <th>Total Points</th>
-                  <th>Tournaments</th>
-                  <th>Avg Points</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedLeaderboard.length > 0 ? (
-                  paginatedLeaderboard.map(player => (
-                    <tr key={player.name}>
-                      <td>{player.rank}</td>
-                      <td>{player.name}</td>
-                      <td><strong>{player.total}</strong></td>
-                      <td>{player.count}</td>
-                      <td>{player.avg}</td>
-                    </tr>
-                  ))
-                ) : (
+            <div className="table-container">
+              <table>
+                <thead>
                   <tr>
-                    <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
-                      No data available
-                    </td>
+                    <th>Rank</th>
+                    <th>Player Name</th>
+                    <th>Points</th>
+                    <th>Record</th>
+                    <th>OMW%</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {leaderboardData.length > ITEMS_PER_PAGE && (
-            <div className="pagination-controls">
-              <button
-                onClick={() => setLeaderboardPage(p => p - 1)}
-                disabled={leaderboardPage === 1}
-              >
-                ← Previous
-              </button>
-              <span id="leaderboardPageInfo">
-                Page {leaderboardPage} of {Math.ceil(leaderboardData.length / ITEMS_PER_PAGE)}
-              </span>
-              <button
-                onClick={() => setLeaderboardPage(p => p + 1)}
-                disabled={leaderboardPage >= Math.ceil(leaderboardData.length / ITEMS_PER_PAGE)}
-              >
-                Next →
-              </button>
+                </thead>
+                <tbody>
+                  {paginatedWeekly.length > 0 ? (
+                    paginatedWeekly.map(entry => (
+                      <tr key={`${entry.name}-${entry.week}`}>
+                        <td>{entry.rank}</td>
+                        <td>{entry.name}</td>
+                        <td><strong>{entry.points}</strong></td>
+                        <td>{entry.record || '-'}</td>
+                        <td>{entry.omwPercent || '-'}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
+                        No data available
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
-          )}
-        </>
-      )}
-    </div>
+
+            {filteredWeeklyData.length > ITEMS_PER_PAGE && (
+              <div className="pagination-controls">
+                <button
+                  onClick={() => setWeeklyPage(p => p - 1)}
+                  disabled={weeklyPage === 1}
+                >
+                  ← Previous
+                </button>
+                <span id="pageInfo">
+                  Page {weeklyPage} of {Math.ceil(filteredWeeklyData.length / ITEMS_PER_PAGE)}
+                </span>
+                <button
+                  onClick={() => setWeeklyPage(p => p + 1)}
+                  disabled={weeklyPage >= Math.ceil(filteredWeeklyData.length / ITEMS_PER_PAGE)}
+                >
+                  Next →
+                </button>
+              </div>
+            )}
+
+            <h2>Leaderboard</h2>
+            <div className="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Rank</th>
+                    <th>Player</th>
+                    <th>Total Points</th>
+                    <th>Tournaments</th>
+                    <th>Avg Points</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedLeaderboard.length > 0 ? (
+                    paginatedLeaderboard.map(player => (
+                      <tr key={player.name}>
+                        <td>{player.rank}</td>
+                        <td>{player.name}</td>
+                        <td><strong>{player.total}</strong></td>
+                        <td>{player.count}</td>
+                        <td>{player.avg}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
+                        No data available
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {leaderboardData.length > ITEMS_PER_PAGE && (
+              <div className="pagination-controls">
+                <button
+                  onClick={() => setLeaderboardPage(p => p - 1)}
+                  disabled={leaderboardPage === 1}
+                >
+                  ← Previous
+                </button>
+                <span id="leaderboardPageInfo">
+                  Page {leaderboardPage} of {Math.ceil(leaderboardData.length / ITEMS_PER_PAGE)}
+                </span>
+                <button
+                  onClick={() => setLeaderboardPage(p => p + 1)}
+                  disabled={leaderboardPage >= Math.ceil(leaderboardData.length / ITEMS_PER_PAGE)}
+                >
+                  Next →
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </>
   );
 }

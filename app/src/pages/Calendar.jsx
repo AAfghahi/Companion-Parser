@@ -30,28 +30,32 @@ export default function Calendar() {
   ];
 
   return (
-    <div className="container">
+    <>
       <header>
-        <h1>🧙‍♂️ Colorado Pauper</h1>
-        <p className="subtitle">Weekly tournament schedule across Colorado</p>
+        <div className="container">
+          <h1>🧙‍♂️ Colorado Pauper</h1>
+          <p className="subtitle">Weekly tournament schedule across Colorado</p>
+        </div>
       </header>
 
-      <h2>Upcoming Events</h2>
-      <div className="content">
-        {events.map((event, idx) => (
-          <div key={idx} className="stat-card">
-            <h3 style={{ margin: '0 0 10px 0', color: 'var(--text-primary)' }}>
-              {event.name}
-            </h3>
-            <p style={{ margin: '5px 0' }}>
-              <strong>Location:</strong> {event.location}
-            </p>
-            <p style={{ margin: '5px 0', color: 'var(--text-secondary)' }}>
-              {event.schedule}
-            </p>
-          </div>
-        ))}
+      <div className="container">
+        <h2>Upcoming Events</h2>
+        <div className="content">
+          {events.map((event, idx) => (
+            <div key={idx} className="stat-card">
+              <h3 style={{ margin: '0 0 10px 0', color: 'var(--text-primary)' }}>
+                {event.name}
+              </h3>
+              <p style={{ margin: '5px 0' }}>
+                <strong>Location:</strong> {event.location}
+              </p>
+              <p style={{ margin: '5px 0', color: 'var(--text-secondary)' }}>
+                {event.schedule}
+              </p>
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
