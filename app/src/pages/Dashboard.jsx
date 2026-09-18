@@ -7,15 +7,12 @@ const ITEMS_PER_PAGE = 10;
 
 const formatWeekDate = (dateStr) => {
   if (!dateStr) return dateStr;
-
-  // Handle ISO timestamp format
-  if (dateStr.includes('T')) {
-    const date = new Date(dateStr);
+  const str = String(dateStr);
+  if (str.includes('T')) {
+    const date = new Date(str);
     return (date.getMonth() + 1) + '/' + date.getDate() + '/' + String(date.getFullYear()).slice(-2);
   }
-
-  // Already formatted, return as-is
-  return dateStr;
+  return str;
 };
 
 export default function Dashboard() {

@@ -6,11 +6,12 @@ const ITEMS_PER_PAGE = 10;
 
 const formatWeekDate = (dateStr) => {
   if (!dateStr) return dateStr;
-  if (dateStr.includes('T')) {
-    const date = new Date(dateStr);
+  const str = String(dateStr);
+  if (str.includes('T')) {
+    const date = new Date(str);
     return (date.getMonth() + 1) + '/' + date.getDate() + '/' + String(date.getFullYear()).slice(-2);
   }
-  return dateStr;
+  return str;
 };
 
 export default function SeasonHistory() {
