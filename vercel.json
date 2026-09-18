@@ -1,0 +1,13 @@
+{
+  "buildCommand": "cd app && npm run build",
+  "outputDirectory": "app/dist",
+  "env": {
+    "VITE_GOOGLE_SCRIPT_URL": "@vite_google_script_url"
+  },
+  "functions": {
+    "api/**/*.js": {
+      "memory": 128,
+      "maxDuration": 10
+    }
+  }
+}

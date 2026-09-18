@@ -2,7 +2,15 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 
 const StandingsContext = createContext();
 const CACHE_DURATION = parseInt(import.meta.env.VITE_CACHE_DURATION_MS || '28800000', 10); // 8 hours default
-const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbyiVH_4CPYMiKyL5CBrvLWk40flxccReKSt6q9ClZcN2xztAn_6IrCn6wIEwjArPgnlZQ/exec';
+
+// Use Vercel API in production, localhost in development
+const API_BASE = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+  ? 'http://localhost:3000'
+  : typeof window !== 'undefined'
+  ? ''
+  : '';
+
+const API_URL = `${API_BASE}/api/standings`;
 
 export function StandingsProvider({ children }) {
   const [standings, setStandings] = useState([]);
@@ -54,7 +62,7 @@ export function StandingsProvider({ children }) {
       }
 
       // Fetch from API
-      const response = await fetch(SCRIPT_URL);
+      const response = await fetch(API_URL);
       const rawData = await response.json();
 
       // Map raw data to object format, skipping header row
@@ -98,7 +106,7 @@ export function StandingsProvider({ children }) {
       }
 
       // Fetch from API
-      const response = await fetch(SCRIPT_URL + '?listSeasons=true');
+      const response = await fetch(`${API_URL}?listSeasons=true`);
       const data = await response.json();
 
       if (Array.isArray(data) && typeof data[0] === 'string') {
@@ -134,7 +142,7 @@ export function StandingsProvider({ children }) {
       }
 
       // Fetch from API
-      const response = await fetch(SCRIPT_URL + '?season=' + encodeURIComponent(seasonName));
+      const response = await fetch(`${API_URL}?season=${encodeURIComponent(seasonName)}`);
       const rows = await response.json();
 
       if (rows.success === false) {
