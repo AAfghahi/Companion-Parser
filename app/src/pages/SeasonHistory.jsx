@@ -73,16 +73,24 @@ export default function SeasonHistory() {
     seasonData.slice(1).forEach(entry => {
       const name = entry.name || entry[0];
       const points = entry.points || parseInt(entry[2]);
+      const omwPercent = entry.omwPercent || entry[4];
 
       if (!playerStats[name]) {
-        playerStats[name] = { name, total: 0, count: 0 };
+        playerStats[name] = { name, total: 0, count: 0, omwTotal: 0 };
       }
       playerStats[name].total += points;
       playerStats[name].count += 1;
+      if (omwPercent) {
+        playerStats[name].omwTotal += parseFloat(omwPercent);
+      }
     });
 
     const leaderboard = Object.values(playerStats)
-      .map(player => ({ ...player, avg: (player.total / player.count).toFixed(1) }))
+      .map(player => ({
+        ...player,
+        avg: (player.total / player.count).toFixed(1),
+        omwPercent: player.omwTotal > 0 ? (player.omwTotal / player.count).toFixed(1) : '-'
+      }))
       .sort((a, b) => b.total - a.total);
 
     return leaderboard.map((player, idx) => ({ ...player, rank: idx + 1 }));

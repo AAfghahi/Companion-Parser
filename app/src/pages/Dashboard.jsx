@@ -81,17 +81,21 @@ export default function Dashboard() {
           name: entry.name,
           total: 0,
           count: 0,
-          omwPercent: 0
+          omwTotal: 0
         };
       }
       playerStats[entry.name].total += entry.points;
       playerStats[entry.name].count += 1;
+      if (entry.omwPercent) {
+        playerStats[entry.name].omwTotal += parseFloat(entry.omwPercent);
+      }
     });
 
     const leaderboard = Object.values(playerStats)
       .map(player => ({
         ...player,
-        avg: (player.total / player.count).toFixed(1)
+        avg: (player.total / player.count).toFixed(1),
+        omwPercent: player.omwTotal > 0 ? (player.omwTotal / player.count).toFixed(1) : '-'
       }))
       .sort((a, b) => b.total - a.total);
 
