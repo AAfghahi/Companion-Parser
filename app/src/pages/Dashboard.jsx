@@ -176,15 +176,20 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="container">
+      <>
         <header>
-          <h1>🧙‍♂️ Colorado Pauper</h1>
-          <p className="subtitle">Current season standings powered by Google Sheets</p>
+          <div className="container">
+            <h1>🧙‍♂️ Colorado Pauper</h1>
+            <p className="subtitle">Current season standings powered by Google Sheets</p>
+          </div>
         </header>
-        <div className="loading">
-          <p>Loading...</p>
+        <div className="container">
+          <div className="loading">
+            <div className="spinner"></div>
+            <p>Loading standings...</p>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
