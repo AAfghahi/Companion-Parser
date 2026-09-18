@@ -1,0 +1,10 @@
+{
+  "name": "companion-parser",
+  "version": "1.0.0",
+  "description": "MTG tournament tracker with Google Sheets integration",
+  "private": true,
+  "scripts": {
+    "build": "npm run build --prefix app",
+    "dev": "npm run dev --prefix app"
+  }
+}

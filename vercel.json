@@ -1,9 +1,7 @@
 {
-  "buildCommand": "cd app && npm run build",
+  "buildCommand": "npm install --prefix app && npm run build --prefix app",
   "outputDirectory": "app/dist",
-  "env": {
-    "VITE_GOOGLE_SCRIPT_URL": "@vite_google_script_url"
-  },
+  "installCommand": "echo 'Installing in app directory...'",
   "functions": {
     "api/**/*.js": {
       "memory": 128,

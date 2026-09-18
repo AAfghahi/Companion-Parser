@@ -1,0 +1,7 @@
+# Ignore files that don't need to be deployed
+.git
+.gitignore
+.env.local
+docs
+README.md
+MINNESOTA_SETUP_QUICK_START.md
