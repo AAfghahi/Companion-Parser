@@ -53,18 +53,19 @@ export default function Dashboard() {
       data = data.filter(s => s.week === weekFilter);
     }
 
+    // Sort by points descending and assign ranks first
+    data = data.sort((a, b) => b.points - a.points);
+    data = data.map((item, idx) => ({
+      ...item,
+      rank: idx + 1
+    }));
+
+    // Apply search filter after ranking (keeps original ranks)
     if (searchPlayer) {
       data = data.filter(s => s.name.toLowerCase().includes(searchPlayer.toLowerCase()));
     }
 
-    // Sort by points descending
-    data = data.sort((a, b) => b.points - a.points);
-
-    // Add rank preserving original position
-    return data.map((item, idx) => ({
-      ...item,
-      rank: idx + 1
-    }));
+    return data;
   }, [standings, weekFilter, searchPlayer]);
 
   const paginatedWeekly = useMemo(() => {
