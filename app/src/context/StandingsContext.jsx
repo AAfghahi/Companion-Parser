@@ -63,8 +63,7 @@ export function StandingsProvider({ children }) {
         record: row[1] || '',
         points: parseInt(row[2]) || 0,
         week: row[3] || '',
-        store: row[4] || '',
-        omwPercent: row[5] || ''
+        omwPercent: row[4] || ''
       }));
 
       setCache('standings', data);
