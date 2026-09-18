@@ -10,7 +10,7 @@ function initializeSheet() {
 
   if (!sheet) {
     sheet = ss.insertSheet(SHEET_NAME);
-    sheet.appendRow(['Name', 'Record', 'Points', 'Week', 'Store', 'Timestamp']);
+    sheet.appendRow(['Name', 'Record', 'Points', 'Week', 'OMW', 'Store', 'Timestamp']);
   }
 
   return sheet;
@@ -18,6 +18,45 @@ function initializeSheet() {
 
 // Handle GET requests (for loading data)
 function doGet(e) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const params = e && e.parameter ? e.parameter : {};
+
+  Logger.log('doGet called with e: ' + JSON.stringify(e));
+  Logger.log('doGet called with params: ' + JSON.stringify(params));
+  Logger.log('listSeasons in params: ' + ('listSeasons' in params));
+  Logger.log('params.listSeasons value: ' + params.listSeasons);
+
+  // If season parameter is provided, read from that sheet
+  if (params.season) {
+    const seasonName = params.season;
+    const sheet = ss.getSheetByName(seasonName);
+
+    if (!sheet) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        message: 'Season not found: ' + seasonName
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    const data = sheet.getDataRange().getValues();
+    return ContentService.createTextOutput(JSON.stringify(data))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // If listSeasons parameter is provided, return all sheet names
+  // Try multiple ways to detect the parameter
+  if ('listSeasons' in params || params.listSeasons || (e && e.parameter && e.parameter.listSeasons)) {
+    Logger.log('Returning sheet names');
+    const sheets = ss.getSheets();
+    const seasonNames = sheets.map(sheet => sheet.getName());
+    Logger.log('Sheet names: ' + JSON.stringify(seasonNames));
+
+    return ContentService.createTextOutput(JSON.stringify(seasonNames))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Default: read from current season sheet (MTG Standings)
+  Logger.log('Returning MTG Standings data');
   const sheet = initializeSheet();
   const data = sheet.getDataRange().getValues();
 
@@ -40,6 +79,7 @@ function doPost(e) {
           row.record || '',
           row.points || 0,
           row.week || '',
+          row.omw || '',
           row.store || '',
           new Date().toISOString()
         ]);

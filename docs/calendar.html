@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Colorado Pauper - Calendar</title>
+    <link href="https://cdn.jsdelivr.net/npm/dhtmlx-event-calendar@1.4.0/codebase/dhtmlx-event-calendar.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --border: #e0e0e0;
+            --accent: #6366f1;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-primary: #1a1a1a;
+                --bg-secondary: #2d2d2d;
+                --text-primary: #ffffff;
+                --text-secondary: #b0b0b0;
+                --border: #404040;
+                --accent: #818cf8;
+            }
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .nav-header {
+            background-color: var(--bg-secondary);
+            border-bottom: 2px solid var(--border);
+            margin: -20px -20px 30px -20px;
+            padding: 0;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 0;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0;
+            list-style: none;
+        }
+
+        .nav-tabs li {
+            margin: 0;
+        }
+
+        .nav-tabs a {
+            display: block;
+            padding: 16px 24px;
+            color: var(--text-primary);
+            text-decoration: none;
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+            transition: border-color 0.2s, background-color 0.2s;
+        }
+
+        .nav-tabs a:hover {
+            background-color: var(--bg-primary);
+            border-bottom-color: var(--accent);
+        }
+
+        .nav-tabs a.active {
+            border-bottom-color: var(--accent);
+            color: var(--accent);
+        }
+
+        header {
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95em;
+        }
+
+        .content {
+            background: var(--bg-secondary);
+            padding: 30px;
+            border-radius: 8px;
+        }
+
+        #scheduler {
+            background: var(--bg-primary);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            height: 700px;
+        }
+
+        .dhx_cal_tab {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .dhx_cal_tab.active {
+            background-color: var(--accent);
+            color: white;
+        }
+
+        .dhx_cal_event {
+            background-color: var(--accent);
+            border-color: var(--accent);
+            cursor: pointer;
+        }
+
+        .dhx_cal_event_clear {
+            background-color: var(--bg-secondary);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+            animation: fadeIn 0.2s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background-color: var(--bg-primary);
+            margin: 5% auto;
+            padding: 30px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 15px;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.5em;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            color: var(--text-primary);
+        }
+
+        .event-info {
+            margin-bottom: 15px;
+        }
+
+        .event-info-label {
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 5px;
+        }
+
+        .event-info-value {
+            color: var(--text-primary);
+            margin-left: 10px;
+        }
+    </style>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+</head>
+<body>
+    <nav class="nav-header">
+        <ul class="nav-tabs">
+            <li><a href="index.html">🧙‍♂️ Current Season</a></li>
+            <li><a href="season-history.html">Past Seasons</a></li>
+            <li><a href="rules.html">Rules</a></li>
+            <li><a href="calendar.html" class="active">Calendar</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <header>
+            <h1>🧙‍♂️ Colorado Pauper - Calendar</h1>
+            <p class="subtitle">Weekly tournament schedule across Colorado</p>
+        </header>
+
+        <div class="content">
+            <div id="scheduler"></div>
+        </div>
+    </div>
+
+    <div id="eventModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="eventTitle"></h2>
+                <button class="modal-close" onclick="closeEventModal()">×</button>
+            </div>
+            <div id="eventDetails"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/dhtmlx-event-calendar@1.4.0/codebase/dhtmlx-event-calendar.js"></script>
+    <script>
+        const events = [
+            { title: 'Pauper @ MeH Games', start_date: new Date(2026, 8, 14, 19, 0), end_date: new Date(2026, 8, 14, 21, 0), location: 'MeH Games', address: 'Greenwood Village', region: 'Metro Denver', recurring: 'week_1_mo' },
+            { title: 'Pauper @ Enchanted Grounds', start_date: new Date(2026, 8, 15, 19, 0), end_date: new Date(2026, 8, 15, 21, 0), location: 'Enchanted Grounds', address: 'Highlands Ranch', region: 'Metro Denver', recurring: 'week_1_tu' },
+            { title: 'Pauper @ All C\'s', start_date: new Date(2026, 8, 16, 19, 0), end_date: new Date(2026, 8, 16, 21, 0), location: 'All C\'s', address: 'Aurora', region: 'Metro Denver', recurring: 'week_1_we' },
+            { title: 'Pauper @ Mythic Games', start_date: new Date(2026, 8, 17, 18, 30), end_date: new Date(2026, 8, 17, 20, 30), location: 'Mythic Games', address: 'Littleton', region: 'Metro Denver', recurring: 'week_1_th' },
+            { title: 'Pauper @ Denver Central Games', start_date: new Date(2026, 8, 20, 13, 0), end_date: new Date(2026, 8, 20, 15, 0), location: 'Denver Central Games', address: 'Denver', region: 'Metro Denver', recurring: 'week_1_su' },
+            { title: 'Pauper @ Card Cosmos', start_date: new Date(2026, 8, 14, 18, 30), end_date: new Date(2026, 8, 14, 20, 30), location: 'Card Cosmos', address: 'Colorado Springs', region: 'Other Locations', recurring: 'week_1_mo' },
+            { title: 'Pauper @ Grandmaster Games', start_date: new Date(2026, 8, 16, 19, 0), end_date: new Date(2026, 8, 16, 21, 0), location: 'Grandmaster Games', address: 'Boulder', region: 'Other Locations', recurring: 'week_1_we' },
+            { title: 'Pauper @ Foxfire Games', start_date: new Date(2026, 8, 18, 18, 0), end_date: new Date(2026, 8, 18, 20, 0), location: 'Foxfire Games', address: 'Fort Collins', region: 'Other Locations', recurring: 'week_1_fr' }
+        ];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.getElementById('scheduler');
+            const calendar = new dhtmlx.EventCalendar(container, {
+                view: 'week',
+                date: new Date(2026, 8, 14),
+                events: events
+            });
+
+            calendar.events.attachEvent('click', function(id) {
+                const event = calendar.events.getEvent(id);
+                showEventModal(event);
+            });
+        });
+
+        function showEventModal(event) {
+            document.getElementById('eventTitle').textContent = event.title;
+            document.getElementById('eventDetails').innerHTML = `
+                <div class="event-info">
+                    <div class="event-info-label">Time</div>
+                    <div class="event-info-value">${formatTime(event.start_date)} - ${formatTime(event.end_date)}</div>
+                </div>
+                <div class="event-info">
+                    <div class="event-info-label">Location</div>
+                    <div class="event-info-value">${event.location}</div>
+                </div>
+                <div class="event-info">
+                    <div class="event-info-label">Address</div>
+                    <div class="event-info-value">${event.address}</div>
+                </div>
+                <div class="event-info">
+                    <div class="event-info-label">Region</div>
+                    <div class="event-info-value">${event.region}</div>
+                </div>
+            `;
+            document.getElementById('eventModal').style.display = 'block';
+        }
+
+        function formatTime(date) {
+            return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        }
+
+        function closeEventModal() {
+            document.getElementById('eventModal').style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('eventModal');
+            if (event.target === modal) {
+                closeEventModal();
+            }
+        }
+    </script>
+</body>
+</html>

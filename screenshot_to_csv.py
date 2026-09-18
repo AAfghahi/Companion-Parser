@@ -8,6 +8,7 @@ with automatic match point calculation. Supports Win/Loss/Draw records and round
 
 import argparse
 import csv
+import json
 import os
 import sys
 from pathlib import Path
@@ -22,6 +23,10 @@ except ImportError:
     print("Error: Required packages not installed.")
     print("Please run: pip install -r requirements.txt")
     sys.exit(1)
+
+# Player opt-out list - players who don't want their data represented
+# Can be overridden by OPT_OUT_PLAYERS environment variable
+OPT_OUT_PLAYERS: List[str] = []
 
 
 def clean_name(name: str) -> str:
@@ -137,12 +142,20 @@ def parse_standings(text: str) -> List[Dict[str, any]]:
             if points is None:
                 points = calculate_points(record)
 
+            # Extract OMW% if present (looks for percentage after record)
+            omw = None
+            if record_idx + 1 < len(parts):
+                potential_omw = parts[record_idx + 1]
+                omw_match = re.search(r'(\d+(?:\.\d+)?)\s*%', potential_omw)
+                if omw_match:
+                    omw = float(omw_match.group(1))
+
             if name and record:
                 standings.append({
                     'name': name.strip(),
                     'record': record,
                     'points': points,
-                    'omw': None  # Optional: could parse OMW% if needed
+                    'omw': omw
                 })
 
         except Exception as e:
@@ -198,6 +211,43 @@ def parse_date_string(date_str: str) -> datetime:
             raise ValueError(f"Invalid date format: {date_str}. Use M/D/YY or M/D/YYYY")
 
 
+def load_opt_out_list() -> List[str]:
+    """
+    Load the list of players who have opted out of data tracking.
+    Players can be specified two ways:
+    1. OPT_OUT_PLAYERS environment variable (comma-separated list)
+    2. OPT_OUT_PLAYERS global variable (list of strings)
+
+    Environment variable takes precedence if set.
+    Example: OPT_OUT_PLAYERS="John Doe,Jane Smith"
+    """
+    global OPT_OUT_PLAYERS
+
+    # Check environment variable first
+    opt_out_env = os.getenv('OPT_OUT_PLAYERS', '')
+    if opt_out_env.strip():
+        # Split by comma and clean up each name
+        return [name.strip().lower() for name in opt_out_env.split(',') if name.strip()]
+
+    # Fall back to global variable (convert to lowercase for comparison)
+    return [name.lower() for name in OPT_OUT_PLAYERS]
+
+
+def filter_opt_out_players(standings: List[Dict[str, any]]) -> List[Dict[str, any]]:
+    """
+    Filter out players who have opted out of data tracking.
+    """
+    opt_out_list = load_opt_out_list()
+    if not opt_out_list:
+        return standings
+
+    filtered = [entry for entry in standings if entry['name'].lower() not in opt_out_list]
+    removed_count = len(standings) - len(filtered)
+    if removed_count > 0:
+        print(f"Filtered out {removed_count} opted-out player(s)")
+    return filtered
+
+
 def merge_standings(*files_list) -> List[Dict[str, any]]:
     """
     Merge standings from multiple sources, removing duplicates by name.
@@ -216,7 +266,7 @@ def merge_standings(*files_list) -> List[Dict[str, any]]:
     return list(seen_names.values())
 
 
-def write_csv(standings: List[Dict[str, any]], output_path: str, include_omw: bool = False):
+def write_csv(standings: List[Dict[str, any]], output_path: str, include_omw: bool = True):
     """Write standings to CSV file."""
     if not standings:
         print("No data to write")
@@ -242,15 +292,83 @@ def write_csv(standings: List[Dict[str, any]], output_path: str, include_omw: bo
         print(f"Error writing CSV: {e}")
 
 
+def write_json(standings: List[Dict[str, any]], output_path: str):
+    """Write standings to JSON file."""
+    if not standings:
+        print("No data to write")
+        return
+
+    try:
+        import json
+        with open(output_path, 'w') as jsonfile:
+            json.dump(standings, jsonfile, indent=2)
+
+        print(f"JSON written to: {output_path}")
+    except Exception as e:
+        print(f"Error writing JSON: {e}")
+
+
+def write_excel(standings: List[Dict[str, any]], output_path: str, include_omw: bool = True):
+    """Write standings to Excel file."""
+    if not standings:
+        print("No data to write")
+        return
+
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Standings"
+
+        # Define headers
+        headers = ['Name', 'Record', 'Week', 'Points']
+        if include_omw:
+            headers.append('OMW')
+
+        # Write headers
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col)
+            cell.value = header
+            cell.font = Font(bold=True)
+            cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        # Write data
+        for row_idx, entry in enumerate(standings, 2):
+            ws.cell(row=row_idx, column=1).value = entry.get('name', '')
+            ws.cell(row=row_idx, column=2).value = entry.get('record', '')
+            ws.cell(row=row_idx, column=3).value = entry.get('week', '')
+            ws.cell(row=row_idx, column=4).value = entry.get('points', 0)
+            if include_omw:
+                ws.cell(row=row_idx, column=5).value = entry.get('omw', '')
+
+        # Auto-adjust column widths
+        ws.column_dimensions['A'].width = 20
+        ws.column_dimensions['B'].width = 12
+        ws.column_dimensions['C'].width = 12
+        ws.column_dimensions['D'].width = 10
+        if include_omw:
+            ws.column_dimensions['E'].width = 10
+
+        wb.save(output_path)
+        print(f"Excel written to: {output_path}")
+        print(f"Total entries: {len(standings)}")
+    except Exception as e:
+        print(f"Error writing Excel: {e}")
+
+
 def main():
     parser = argparse.ArgumentParser(
-        description='Convert Magic: The Gathering tournament standings screenshots to CSV',
+        description='Convert Magic: The Gathering tournament standings screenshots to Excel/JSON',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='''
 Examples:
-  python screenshot_to_csv.py screenshot.png -o standings.csv
-  python screenshot_to_csv.py screenshot.png -d 9/14/26 -o week.csv
-  python screenshot_to_csv.py img1.png img2.png -o merged.csv
+  python screenshot_to_csv.py screenshot.png -o standings.xlsx
+  python screenshot_to_csv.py screenshot.png -d 9/14/26 -o week.xlsx -s "Store Name"
+  python screenshot_to_csv.py img1.png img2.png -o merged.xlsx --json standings.json
         '''
     )
 
@@ -262,8 +380,8 @@ Examples:
 
     parser.add_argument(
         '-o', '--output',
-        help='Output CSV file path (default: standings.csv)',
-        default='standings.csv'
+        help='Output Excel file path (default: standings.xlsx)',
+        default='standings.xlsx'
     )
 
     parser.add_argument(
@@ -272,9 +390,19 @@ Examples:
     )
 
     parser.add_argument(
-        '--omw',
+        '-s', '--store',
+        help='Store/event name for tracking (optional)'
+    )
+
+    parser.add_argument(
+        '--json',
+        help='Output JSON file path (optional, for artifact database)'
+    )
+
+    parser.add_argument(
+        '--no-omw',
         action='store_true',
-        help='Include OMW%% column in output'
+        help='Exclude OMW%% column from output (default: included)'
     )
 
     args = parser.parse_args()
@@ -290,8 +418,21 @@ Examples:
     if len(args.images) > 1:
         all_standings = merge_standings(all_standings)
 
-    # Write CSV
-    write_csv(all_standings, args.output, include_omw=args.omw)
+    # Add store name if provided
+    if args.store:
+        for entry in all_standings:
+            entry['store'] = args.store
+
+    # Filter out opted-out players
+    all_standings = filter_opt_out_players(all_standings)
+
+    # Write Excel (main output format)
+    include_omw = not args.no_omw
+    write_excel(all_standings, args.output, include_omw=include_omw)
+
+    # Write JSON if requested
+    if args.json:
+        write_json(all_standings, args.json)
 
 
 if __name__ == '__main__':
