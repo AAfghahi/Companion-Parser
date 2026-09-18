@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Colorado Pauper - Rules</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --border: #e0e0e0;
+            --accent: #6366f1;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-primary: #1a1a1a;
+                --bg-secondary: #2d2d2d;
+                --text-primary: #ffffff;
+                --text-secondary: #b0b0b0;
+                --border: #404040;
+                --accent: #818cf8;
+            }
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .nav-header {
+            background-color: var(--bg-secondary);
+            border-bottom: 2px solid var(--border);
+            margin: -20px -20px 30px -20px;
+            padding: 0;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 0;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0;
+            list-style: none;
+        }
+
+        .nav-tabs li {
+            margin: 0;
+        }
+
+        .nav-tabs a {
+            display: block;
+            padding: 16px 24px;
+            color: var(--text-primary);
+            text-decoration: none;
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+            transition: border-color 0.2s, background-color 0.2s;
+        }
+
+        .nav-tabs a:hover {
+            background-color: var(--bg-primary);
+            border-bottom-color: var(--accent);
+        }
+
+        .nav-tabs a.active {
+            border-bottom-color: var(--accent);
+            color: var(--accent);
+        }
+
+        header {
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95em;
+        }
+
+        .content {
+            background: var(--bg-secondary);
+            padding: 30px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-header">
+        <ul class="nav-tabs">
+            <li><a href="index.html">🧙‍♂️ Current Season</a></li>
+            <li><a href="season-history.html">Past Seasons</a></li>
+            <li><a href="rules.html" class="active">Rules</a></li>
+            <li><a href="calendar.html">Calendar</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <header>
+            <h1>🧙‍♂️ Colorado Pauper - Rules</h1>
+            <p class="subtitle">Tournament rules and format</p>
+        </header>
+
+        <div class="content">
+            <p>Rules page coming soon...</p>
+        </div>
+    </div>
+</body>
+</html>
