@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useStandings } from '../context/StandingsContext';
 import '../styles/pages.css';
 
-const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1550165206129311765/PqURo0K0NLaAMmCbxqcru2cSMHROUpWbeFV2qxTBAlkgJun81ll-dMmGDI--FbyqccC-';
+const DISCORD_WEBHOOK = import.meta.env.VITE_DISCORD_WEBHOOK_URL || '';
 const ITEMS_PER_PAGE = 10;
 
 export default function Dashboard() {
