@@ -121,7 +121,7 @@ export default function Dashboard() {
     if (currentWeek && !weekFilter) {
       setWeekFilter(currentWeek);
     }
-  }, [currentWeek]);
+  }, [currentWeek, weekFilter]);
 
   const handleReportOpen = () => {
     setReportData({
