@@ -3,7 +3,7 @@ import { defineConfig } from 'vite'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/Companion-Parser/',
+  base: '/',
   plugins: [react()],
   build: {
     outDir: '../docs',
