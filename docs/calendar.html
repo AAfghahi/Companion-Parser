@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Colorado Pauper - Calendar</title>
-    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></link>
+    <link href="https://cdn.jsdelivr.net/npm/dhtmlx-event-calendar@1.4.0/codebase/dhtmlx-event-calendar.css" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -107,52 +107,33 @@
             border-radius: 8px;
         }
 
-        #calendar {
+        #scheduler {
             background: var(--bg-primary);
             border-radius: 8px;
-            padding: 20px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            height: 700px;
+        }
+
+        .dhx_cal_tab {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
             border: 1px solid var(--border);
         }
 
-        .fc {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        .dhx_cal_tab.active {
+            background-color: var(--accent);
+            color: white;
         }
 
-        .fc .fc-button-primary {
+        .dhx_cal_event {
             background-color: var(--accent);
             border-color: var(--accent);
-        }
-
-        .fc .fc-button-primary:hover {
-            background-color: var(--accent);
-            opacity: 0.9;
-        }
-
-        .fc .fc-button-primary.fc-button-active {
-            background-color: var(--accent);
-        }
-
-        .fc .fc-daygrid-day {
-            background-color: var(--bg-primary);
-        }
-
-        .fc .fc-daygrid-day.fc-day-other {
-            background-color: var(--bg-secondary);
-        }
-
-        .fc .fc-daygrid-day:hover {
-            background-color: var(--bg-secondary);
-        }
-
-        .fc .fc-event {
             cursor: pointer;
-            border: none;
-            padding: 2px 4px;
-            font-size: 0.85em;
         }
 
-        .fc-event-title {
-            font-weight: 600;
+        .dhx_cal_event_clear {
+            background-color: var(--bg-secondary);
         }
 
         .modal {
@@ -250,7 +231,7 @@
         </header>
 
         <div class="content">
-            <div id="calendar"></div>
+            <div id="scheduler"></div>
         </div>
     </div>
 
@@ -264,99 +245,58 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/dhtmlx-event-calendar@1.4.0/codebase/dhtmlx-event-calendar.js"></script>
     <script>
         const events = [
-            // Metro Denver - Monday
-            { title: 'Pauper @ MeH Games', day: 'MO', time: '19:00', location: 'MeH Games', address: 'Greenwood Village', region: 'Metro Denver' },
-            // Metro Denver - Tuesday
-            { title: 'Pauper @ Enchanted Grounds', day: 'TU', time: '19:00', location: 'Enchanted Grounds', address: 'Highlands Ranch', region: 'Metro Denver' },
-            // Metro Denver - Wednesday
-            { title: 'Pauper @ All C\'s', day: 'WE', time: '19:00', location: 'All C\'s', address: 'Aurora', region: 'Metro Denver' },
-            // Metro Denver - Thursday
-            { title: 'Pauper @ Mythic Games', day: 'TH', time: '18:30', location: 'Mythic Games', address: 'Littleton', region: 'Metro Denver' },
-            // Metro Denver - Sunday
-            { title: 'Pauper @ Denver Central Games', day: 'SU', time: '13:00', location: 'Denver Central Games', address: 'Denver', region: 'Metro Denver' },
-            // Other locations - Monday
-            { title: 'Pauper @ Card Cosmos', day: 'MO', time: '18:30', location: 'Card Cosmos', address: 'Colorado Springs', region: 'Other Locations' },
-            // Other locations - Wednesday
-            { title: 'Pauper @ Grandmaster Games', day: 'WE', time: '19:00', location: 'Grandmaster Games', address: 'Boulder', region: 'Other Locations' },
-            // Other locations - Friday
-            { title: 'Pauper @ Foxfire Games', day: 'FR', time: '18:00', location: 'Foxfire Games', address: 'Fort Collins', region: 'Other Locations' }
+            { title: 'Pauper @ MeH Games', start_date: new Date(2026, 8, 14, 19, 0), end_date: new Date(2026, 8, 14, 21, 0), location: 'MeH Games', address: 'Greenwood Village', region: 'Metro Denver', recurring: 'week_1_mo' },
+            { title: 'Pauper @ Enchanted Grounds', start_date: new Date(2026, 8, 15, 19, 0), end_date: new Date(2026, 8, 15, 21, 0), location: 'Enchanted Grounds', address: 'Highlands Ranch', region: 'Metro Denver', recurring: 'week_1_tu' },
+            { title: 'Pauper @ All C\'s', start_date: new Date(2026, 8, 16, 19, 0), end_date: new Date(2026, 8, 16, 21, 0), location: 'All C\'s', address: 'Aurora', region: 'Metro Denver', recurring: 'week_1_we' },
+            { title: 'Pauper @ Mythic Games', start_date: new Date(2026, 8, 17, 18, 30), end_date: new Date(2026, 8, 17, 20, 30), location: 'Mythic Games', address: 'Littleton', region: 'Metro Denver', recurring: 'week_1_th' },
+            { title: 'Pauper @ Denver Central Games', start_date: new Date(2026, 8, 20, 13, 0), end_date: new Date(2026, 8, 20, 15, 0), location: 'Denver Central Games', address: 'Denver', region: 'Metro Denver', recurring: 'week_1_su' },
+            { title: 'Pauper @ Card Cosmos', start_date: new Date(2026, 8, 14, 18, 30), end_date: new Date(2026, 8, 14, 20, 30), location: 'Card Cosmos', address: 'Colorado Springs', region: 'Other Locations', recurring: 'week_1_mo' },
+            { title: 'Pauper @ Grandmaster Games', start_date: new Date(2026, 8, 16, 19, 0), end_date: new Date(2026, 8, 16, 21, 0), location: 'Grandmaster Games', address: 'Boulder', region: 'Other Locations', recurring: 'week_1_we' },
+            { title: 'Pauper @ Foxfire Games', start_date: new Date(2026, 8, 18, 18, 0), end_date: new Date(2026, 8, 18, 20, 0), location: 'Foxfire Games', address: 'Fort Collins', region: 'Other Locations', recurring: 'week_1_fr' }
         ];
 
-        const dayMap = { 'MO': 1, 'TU': 2, 'WE': 3, 'TH': 4, 'FR': 5, 'SU': 0 };
-
-        const calendarEvents = events.map(event => {
-            const dayOfWeek = dayMap[event.day];
-            return {
-                title: event.title,
-                daysOfWeek: [dayOfWeek],
-                startTime: event.time,
-                endTime: addMinutes(event.time, 120),
-                extendedProps: {
-                    location: event.location,
-                    address: event.address,
-                    region: event.region,
-                    time: event.time
-                }
-            };
-        });
-
-        function addMinutes(timeStr, minutes) {
-            const [hours, mins] = timeStr.split(':').map(Number);
-            const totalMins = hours * 60 + mins + minutes;
-            const newHours = Math.floor(totalMins / 60) % 24;
-            const newMins = totalMins % 60;
-            return `${String(newHours).padStart(2, '0')}:${String(newMins).padStart(2, '0')}`;
-        }
-
         document.addEventListener('DOMContentLoaded', function() {
-            const calendarEl = document.getElementById('calendar');
-            const calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'timeGridWeek',
-                headerToolbar: {
-                    left: 'prev,next today',
-                    center: 'title',
-                    right: 'timeGridWeek,listWeek'
-                },
-                events: calendarEvents,
-                eventClick: function(info) {
-                    showEventModal(info.event);
-                },
-                slotLabelFormat: {
-                    meridiem: 'short'
-                }
+            const container = document.getElementById('scheduler');
+            const calendar = new dhtmlx.EventCalendar(container, {
+                view: 'week',
+                date: new Date(2026, 8, 14),
+                events: events
             });
-            calendar.render();
+
+            calendar.events.attachEvent('click', function(id) {
+                const event = calendar.events.getEvent(id);
+                showEventModal(event);
+            });
         });
 
         function showEventModal(event) {
-            const title = event.title;
-            const location = event.extendedProps.location;
-            const address = event.extendedProps.address;
-            const region = event.extendedProps.region;
-            const time = event.extendedProps.time;
-
-            document.getElementById('eventTitle').textContent = title;
+            document.getElementById('eventTitle').textContent = event.title;
             document.getElementById('eventDetails').innerHTML = `
                 <div class="event-info">
                     <div class="event-info-label">Time</div>
-                    <div class="event-info-value">${time}</div>
+                    <div class="event-info-value">${formatTime(event.start_date)} - ${formatTime(event.end_date)}</div>
                 </div>
                 <div class="event-info">
                     <div class="event-info-label">Location</div>
-                    <div class="event-info-value">${location}</div>
+                    <div class="event-info-value">${event.location}</div>
                 </div>
                 <div class="event-info">
                     <div class="event-info-label">Address</div>
-                    <div class="event-info-value">${address}</div>
+                    <div class="event-info-value">${event.address}</div>
                 </div>
                 <div class="event-info">
                     <div class="event-info-label">Region</div>
-                    <div class="event-info-value">${region}</div>
+                    <div class="event-info-value">${event.region}</div>
                 </div>
             `;
             document.getElementById('eventModal').style.display = 'block';
+        }
+
+        function formatTime(date) {
+            return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
         }
 
         function closeEventModal() {
