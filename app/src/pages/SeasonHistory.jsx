@@ -18,7 +18,7 @@ export default function SeasonHistory() {
   useEffect(() => {
     const fetchSeasons = async () => {
       const data = await loadSeasons();
-      const filtered = (data || []).filter(s => s !== 'Main Standings');
+      const filtered = (data || []).filter(s => s !== 'MTG Standings' && s !== 'Main Standings');
       setSeasons(filtered);
       if (filtered && filtered.length > 0) {
         setSelectedSeason(filtered[0]);
