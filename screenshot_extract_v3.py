@@ -13,6 +13,41 @@ import sys
 from pathlib import Path
 import re
 from typing import List, Dict, Optional
+from datetime import datetime, timedelta
+from difflib import get_close_matches
+
+# Known players list for Colorado Pauper tournament
+KNOWN_PLAYERS = [
+    'Neil Brady',
+    'Callie Linn',
+    'Matt Riecks',
+    'Tommy Adams',
+    'Willow Parker',
+    'Ve Marie',
+    'Julien Hamann',
+    'Alexander Stautheim',
+    'Michael Ross',
+    'Michael Dong',
+    'Tim Mulcahy',
+    'Lynn Adams',
+    'Bryce Kari',
+    'Ct Donohue',
+    'Clayton Watkins',
+    'Rick Willison',
+    'Conifer OSulli',
+    'Alex Brown',
+    'Sergio Sandoval',
+    'Dustin Gault',
+    'Gina Griffin',
+    'Hayden Sapp',
+    'Nick Orichella',
+    'Ramona Hageman',
+    'Steve Rubenkoenig',
+    'Chris Kennedy',
+    'Nathan Shiflet',
+    'Nick Caroselli',
+    'arash afghahi',
+]
 
 try:
     from PIL import Image, ImageEnhance
@@ -53,6 +88,34 @@ def clean_name(name: str) -> str:
     cleaned = re.sub(r"[^a-zA-Z\s\-']", '', cleaned)
     cleaned = re.sub(r'\s+', ' ', cleaned)
     return cleaned.strip()
+
+
+def recover_unknowns(standings: List[Dict], all_extracted_names: List[str]) -> List[Dict]:
+    """Recover Unknown entries and truncated names by fuzzy matching against known players."""
+    used_names = {e['name'].lower() for e in standings if not e['name'].startswith('Unknown_') and len(e['name']) > 5}
+
+    for entry in standings:
+        name = entry['name']
+
+        is_unknown = name.startswith('Unknown_')
+        is_truncated = len(name) < 8 and not is_unknown
+
+        if not (is_unknown or is_truncated):
+            continue
+
+        available_players = [p for p in KNOWN_PLAYERS if p.lower() not in used_names]
+
+        if not available_players:
+            continue
+
+        matches = get_close_matches(name, available_players, n=1, cutoff=0.6)
+
+        if matches:
+            best_match = matches[0]
+            entry['name'] = best_match
+            used_names.add(best_match.lower())
+
+    return standings
 
 
 def calculate_points(record: str) -> int:
@@ -327,6 +390,13 @@ def main():
     print(f"Processing: {args.image}")
 
     ocr_text = extract_ocr_text(args.image)
+
+    # Recover unknown names using known player list
+    all_extracted_names = []
+    for standings in all_standings:
+        for entry in standings:
+            all_extracted_names.append(entry['name'])
+    merged_standings = recover_unknowns(merged_standings, all_extracted_names)
 
     if args.debug:
         print("\n=== Raw OCR Output ===")
