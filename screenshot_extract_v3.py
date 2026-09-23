@@ -194,7 +194,7 @@ def parse_standings_table_format(lines: List[str], record_pattern: str) -> Optio
             continue
         if line.startswith(('«', '>', '<', '◆', '♦', '●', '◉', '»', '~', ')')):
             continue
-        if not line or len(line.strip()) < 2:
+        if not line or len(line.strip()) < 1:
             continue
 
         # Extract rank (should be first number), or convert misread OCR characters to digits
@@ -386,7 +386,7 @@ def parse_standings_debug(ocr_text: str) -> tuple[List[Dict], dict]:  # type: ig
             continue
         if line.startswith(('«', '>', '<', '◆', '♦', '●', '◉', '»', '~', ')')):
             continue
-        if not line or len(line.strip()) < 2:
+        if not line or len(line.strip()) < 1:
             continue
 
         # Fix misread rank digits - same logic as main parser
