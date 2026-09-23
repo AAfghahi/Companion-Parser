@@ -50,3 +50,4 @@ package-lock.json
 # Environment
 .env.local
 .env
+*.xlsx
