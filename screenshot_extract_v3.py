@@ -159,7 +159,7 @@ def parse_date_string(date_str: str) -> datetime:
 
 
 def parse_standings_table_format(lines: List[str], record_pattern: str) -> Optional[List[Dict]]:
-    """Parse scrambled table format by extracting all data pieces separately."""
+    """Parse table format with complete rows (Rank, Name, Points, Record, Percentages on same line)."""
 
     header_idx = -1
     for i, line in enumerate(lines):
@@ -170,11 +170,7 @@ def parse_standings_table_format(lines: List[str], record_pattern: str) -> Optio
     if header_idx == -1:
         return None
 
-    # Extract all data pieces separately
-    ranks = []
-    names = []
-    records = []
-    percentages = []
+    standings = []
 
     for line in lines[header_idx + 1:]:
         line_upper = line.upper()
@@ -187,66 +183,50 @@ def parse_standings_table_format(lines: List[str], record_pattern: str) -> Optio
         if not line or len(line.strip()) < 2:
             continue
 
-        # Extract ranks (1-2 digits at start)
-        rank_match = re.match(r'^(\d{1,2})[.\s]', line)
-        if rank_match:
-            ranks.append(int(rank_match.group(1)))
-
-        # Extract records (W-L or W-L-D format)
-        found_record = re.search(record_pattern, line)
-        if found_record:
-            records.append(found_record.group(0))
-
-        # Extract percentages
-        percents = re.findall(r'(\d+(?:\.\d+)?)\s*%', line)
-        for p in percents:
-            percentages.append(float(p))
-
-        # Extract names (lines with letters that aren't just metadata)
-        if not re.search(record_pattern, line) and not re.search(r'\d+\s*%', line):
-            name_candidate = line.strip()
-
-            # Skip if mostly numbers or special chars
-            if name_candidate and any(c.isalpha() for c in name_candidate):
-                # Remove leading rank number
-                name_candidate = re.sub(r'^\d+[.\s]*', '', name_candidate).strip()
-                # Remove trailing special chars and numbers
-                name_candidate = re.sub(r'[)\]"\'~].*$', '', name_candidate).strip()
-
-                if name_candidate and len(name_candidate) > 1:
-                    cleaned = clean_name(name_candidate)
-                    if cleaned and len(cleaned) > 1:
-                        names.append(cleaned)
-
-    # Match data by index
-    num_entries = max(len(names), len(records))
-    if num_entries == 0:
-        return None
-
-    standings = []
-    for idx in range(num_entries):
-        # Assign ranks sequentially (scrambled OCR ranks aren't reliable)
-        rank = idx + 1
-        name = names[idx] if idx < len(names) else f"Unknown_{idx+1}"
-
-        if idx < len(records):
-            record = records[idx]
-            points = calculate_points(record)
-        else:
+        # Extract rank (should be first number)
+        rank_match = re.match(r'^(\d{1,2})[.\s]+', line)
+        if not rank_match:
             continue
+        rank = int(rank_match.group(1))
 
-        omw = None
-        if idx < len(percentages):
-            omw = percentages[idx]
+        # Remove rank from line for further processing
+        line_without_rank = re.sub(r'^\d{1,2}[.\s]+', '', line).strip()
 
-        standings.append({
-            'rank': rank,
-            'name': name,
-            'record': record,
-            'points': points,
-            'omw': omw,
-            'gw': None
-        })
+        # Extract all records from the line
+        records = re.findall(record_pattern, line)
+        if not records:
+            continue
+        record = records[0]
+
+        # Extract all percentages from the line
+        percents = re.findall(r'(\d+(?:\.\d+)?)\s*%', line)
+
+        # Extract name: remove record and percentages, clean up
+        name_candidate = line_without_rank
+        # Remove all records
+        for rec in records:
+            name_candidate = name_candidate.replace(rec, '').strip()
+        # Remove all percentages
+        for perc in percents:
+            name_candidate = name_candidate.replace(f"{perc}%", '').replace(perc, '').strip()
+        # Remove points (number before record)
+        name_candidate = re.sub(r'\s*\d+\s*(?=' + record_pattern + ')', '', name_candidate).strip()
+
+        if name_candidate and len(name_candidate) > 1:
+            name = clean_name(name_candidate)
+            if name and len(name) > 1:
+                points = calculate_points(record)
+                omw = float(percents[0]) if len(percents) > 0 else None
+                gw = float(percents[1]) if len(percents) > 1 else None
+
+                standings.append({
+                    'rank': rank,
+                    'name': name,
+                    'record': record,
+                    'points': points,
+                    'omw': omw,
+                    'gw': gw
+                })
 
     return standings if standings else None
 
