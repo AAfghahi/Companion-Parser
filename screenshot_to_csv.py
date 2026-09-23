@@ -132,6 +132,8 @@ def parse_standings(text: str, debug: bool = False) -> List[Dict[str, any]]:
     standings = []
     orphaned_records = []  # Records without rank/name
     orphaned_entries = []  # Partial entries to fill in later
+    orphaned_names = []    # Names without records (e.g., from colored row entries)
+    orphaned_points = []   # Points without records (e.g., from colored row entries)
 
     # First pass: extract all data and parse complete entries
     for line_num, line in enumerate(merged_lines, 1):
@@ -292,10 +294,18 @@ def parse_standings(text: str, debug: bool = False) -> List[Dict[str, any]]:
                     orphaned_entries.append({'rank': rank, 'line_text': ' '.join(parts[idx:])})
                     if debug:
                         print(f"Debug: Line {line_num} - Orphaned rank: {rank}, text={' '.join(parts[idx:])[:40]}")
-                elif any(not p.replace('%', '').replace('.', '').isdigit() for p in parts):
-                    # Likely a name
+                elif len(parts) == 1 and parts[0].isdigit():
+                    # Single digit - likely orphaned points
+                    orphaned_points.append(int(parts[0]))
                     if debug:
-                        print(f"Debug: Line {line_num} - Orphaned name: {line[:60]}")
+                        print(f"Debug: Line {line_num} - Orphaned points: {parts[0]}")
+                elif any(not p.replace('%', '').replace('.', '').isdigit() for p in parts):
+                    # Likely a name (contains non-digits)
+                    name = clean_name(line)
+                    if name:
+                        orphaned_names.append(name)
+                        if debug:
+                            print(f"Debug: Line {line_num} - Orphaned name: {name}")
 
         except Exception as e:
             if debug:
@@ -351,11 +361,28 @@ def parse_standings(text: str, debug: bool = False) -> List[Dict[str, any]]:
             if debug:
                 print(f"Debug: Reconstructed rank {entry.get('rank')}: record={record_data['record']}")
 
-    # Handle any remaining orphaned records (entries without rank numbers)
-    # These are likely entries 5-6 that completely lost their rank in fragmentation
+    # Handle remaining orphaned records (entries without rank numbers - entries 5-6 from colored rows)
+    # Try to match orphaned names with orphaned points first
+    while orphaned_names and orphaned_points and orphaned_records:
+        name = orphaned_names.pop(0)
+        points = orphaned_points.pop(0)
+        record_data = orphaned_records.pop(0)
+
+        final_entry = {
+            'name': name,
+            'record': record_data['record'],
+            'points': points,  # Use the orphaned points value
+            'omw': record_data['omw'],
+            'gw': record_data['gw']
+        }
+        standings.append(final_entry)
+        if debug:
+            print(f"Debug: Reconstructed orphaned entry: {name}, points={points}, record={record_data['record']}")
+
+    # Any remaining orphaned records are completely lost colored row entries (no name found)
     for record_data in orphaned_records:
         final_entry = {
-            'name': f"Unknown_Entry",
+            'name': f"[Colored Row - Name Lost]",
             'record': record_data['record'],
             'points': record_data['points'],
             'omw': record_data['omw'],
@@ -363,7 +390,22 @@ def parse_standings(text: str, debug: bool = False) -> List[Dict[str, any]]:
         }
         standings.append(final_entry)
         if debug:
-            print(f"Debug: Reconstructed missing entry (no rank): {record_data['record']}, omw={record_data['omw']}, points={record_data['points']}")
+            print(f"Debug: Reconstructed lost colored row entry: {record_data['record']}, omw={record_data['omw']}")
+
+    # Handle any remaining orphaned names or points that weren't matched
+    while orphaned_names:
+        name = orphaned_names.pop(0)
+        final_entry = {
+            'name': name,
+            'record': None,
+            'points': orphaned_points.pop(0) if orphaned_points else None,
+            'omw': None,
+            'gw': None
+        }
+        if final_entry['record']:  # Only add if we have enough data
+            standings.append(final_entry)
+            if debug:
+                print(f"Debug: Reconstructed orphaned name-only entry: {name}")
 
     return standings
 
