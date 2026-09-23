@@ -268,6 +268,83 @@ def parse_standings_table_format(lines: List[str], record_pattern: str) -> Optio
     return standings if standings else None
 
 
+def parse_standings_debug(ocr_text: str) -> tuple[List[Dict], dict]:
+    """Parse standings and return debug info about orphaned data."""
+    lines = [line.strip() for line in ocr_text.split('\n') if line.strip()]
+    record_pattern = r'\d{1,2}-\d{1,2}(?:-\d{1,2})?'
+
+    header_idx = -1
+    for i, line in enumerate(lines):
+        if 'RANK' in line.upper() and 'NAME' in line.upper():
+            header_idx = i
+            break
+
+    if header_idx == -1:
+        return [], {'orphaned_names': [], 'orphaned_records': [], 'complete_entries': 0}
+
+    standings = []
+    orphaned_records = []
+    orphaned_names = []
+    complete_count = 0
+
+    for line in lines[header_idx + 1:]:
+        line_upper = line.upper()
+
+        if any(kw in line_upper for kw in ['STANDINGS', 'MATCH', 'ROUND', 'ASOF']):
+            continue
+        if line.startswith(('«', '>', '<', '◆', '♦', '●', '◉', '»', '~', ')')):
+            continue
+        if not line or len(line.strip()) < 2:
+            continue
+
+        rank_match = re.match(r'^(\d{1,2})[.\s]+', line)
+        if not rank_match:
+            records = re.findall(record_pattern, line)
+            if records:
+                orphaned_records.append(records[0])
+            continue
+
+        rank = int(rank_match.group(1))
+        line_without_rank = re.sub(r'^\d{1,2}[.\s]+', '', line).strip()
+
+        records = re.findall(record_pattern, line)
+        if not records:
+            orphaned_names.append((rank, line_without_rank))
+            continue
+
+        record = records[0]
+        percents = re.findall(r'(\d+(?:\.\d+)?)\s*%', line)
+
+        name_candidate = line_without_rank
+        for rec in records:
+            name_candidate = name_candidate.replace(rec, '').strip()
+        for perc in percents:
+            name_candidate = name_candidate.replace(f"{perc}%", '').replace(perc, '').strip()
+        name_candidate = re.sub(r'\s*\d+\s*(?=' + record_pattern + ')', '', name_candidate).strip()
+
+        if name_candidate and len(name_candidate) > 1:
+            name = clean_name(name_candidate)
+            if name and len(name) > 1:
+                points = calculate_points(record)
+                omw = float(percents[0]) if len(percents) > 0 else None
+                gw = float(percents[1]) if len(percents) > 1 else None
+                standings.append({
+                    'rank': rank,
+                    'name': name,
+                    'record': record,
+                    'points': points,
+                    'omw': omw,
+                    'gw': gw
+                })
+                complete_count += 1
+
+    return standings, {
+        'orphaned_names': orphaned_names,
+        'orphaned_records': orphaned_records,
+        'complete_entries': complete_count
+    }
+
+
 def parse_standings_column_format(lines: List[str], record_pattern: str) -> Optional[List[Dict]]:
     """Try to parse column-based format with separate NAME, POINTS, OMW% sections."""
     names = []
@@ -566,12 +643,16 @@ Examples:
             print(ocr_text)
             print("======================\n")
 
-        standings = parse_standings(ocr_text)
-
         if args.debug:
-            print(f"Debug: Extracted {len(standings)} entries from {image_path}")
+            standings, debug_info = parse_standings_debug(ocr_text)
+            print(f"Debug: Extracted {len(standings)} complete entries from {image_path}")
+            print(f"  Complete entries: {debug_info['complete_entries']}")
+            print(f"  Orphaned names: {len(debug_info['orphaned_names'])} - {debug_info['orphaned_names']}")
+            print(f"  Orphaned records: {len(debug_info['orphaned_records'])} - {debug_info['orphaned_records']}")
             for entry in standings[:3]:
-                print(f"  {entry}")
+                print(f"    {entry}")
+        else:
+            standings = parse_standings(ocr_text)
 
         all_standings.append(standings)
 
