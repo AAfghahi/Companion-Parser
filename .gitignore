@@ -42,3 +42,7 @@ Thumbs.db
 # Output files
 standings.csv
 *.csv
+*.xlsx
+
+# Dependencies
+node_modules/
