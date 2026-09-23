@@ -260,6 +260,8 @@ def parse_standings(text: str, debug: bool = False) -> List[Dict[str, any]]:
     # First pass: extract all data and parse complete entries
     for line_num, line in enumerate(merged_lines, 1):
         line = line.strip()
+        # Clean problematic Unicode characters that cause encoding errors
+        line = line.encode('ascii', 'ignore').decode('ascii')
         if not line:
             continue
         if line.upper().startswith('RANK') or line.upper().startswith('MATCH'):
