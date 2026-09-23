@@ -62,7 +62,7 @@ def calculate_points(record: str) -> int:
         return 0
     wins = int(match.group(1))
     losses = int(match.group(2))
-    draws = int(match.group(3)) or 0
+    draws = int(match.group(3)) if match.group(3) else 0
     return wins * 3 + draws * 1
 
 
