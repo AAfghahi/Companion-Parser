@@ -4,6 +4,7 @@ Magic: The Gathering Tournament Standings Screenshot to CSV Converter
 
 Converts Magic: The Gathering tournament standings screenshots to CSV format
 with automatic match point calculation. Supports Win/Loss/Draw records and round tracking.
+Handles colored rows using PaddleOCR with Tesseract fallback.
 """
 
 import argparse
@@ -23,6 +24,20 @@ except ImportError:
     print("Error: Required packages not installed.")
     print("Please run: pip install -r requirements.txt")
     sys.exit(1)
+
+# Try to import PaddleOCR for better colored text handling
+try:
+    from paddleocr import PaddleOCR
+    PADDLEOCR_AVAILABLE = True
+except ImportError:
+    PADDLEOCR_AVAILABLE = False
+
+# Try to import numpy for image preprocessing
+try:
+    import numpy as np
+    NUMPY_AVAILABLE = True
+except ImportError:
+    NUMPY_AVAILABLE = False
 
 # Player opt-out list - players who don't want their data represented
 # Can be overridden by OPT_OUT_PLAYERS environment variable
@@ -65,12 +80,91 @@ def calculate_points(record: str) -> int:
     return points
 
 
+def preprocess_image_for_ocr(image: Image) -> Image:
+    """
+    Preprocess image to handle colored rows better.
+    Neutralizes saturated colors (like colored backgrounds) to improve OCR.
+    """
+    if not NUMPY_AVAILABLE:
+        return image
+
+    try:
+        img_array = np.array(image)
+
+        # Convert to RGB if needed
+        if len(img_array.shape) == 2:  # Grayscale
+            return image
+
+        if img_array.shape[2] == 4:  # RGBA
+            img_array = img_array[:, :, :3]
+
+        # Detect saturated pixels (colored backgrounds)
+        # High saturation indicates strong color
+        r, g, b = img_array[:,:,0], img_array[:,:,1], img_array[:,:,2]
+        max_val = np.maximum(np.maximum(r, g), b)
+        min_val = np.minimum(np.minimum(r, g), b)
+
+        # Saturation = (max - min) / max, where max > 0
+        saturation = np.zeros_like(max_val, dtype=float)
+        mask = max_val > 0
+        saturation[mask] = (max_val[mask] - min_val[mask]) / max_val[mask]
+
+        # Neutralize highly saturated pixels (> 0.25 saturation = colored)
+        colored_mask = saturation > 0.25
+
+        # Convert colored pixels to grayscale
+        if np.any(colored_mask):
+            gray_val = (img_array[:,:,0].astype(float) * 0.299 +
+                       img_array[:,:,1].astype(float) * 0.587 +
+                       img_array[:,:,2].astype(float) * 0.114).astype(np.uint8)
+            img_array[colored_mask] = gray_val[colored_mask, np.newaxis]
+
+        # Enhance contrast and sharpness
+        enhanced = Image.fromarray(img_array)
+        from PIL import ImageEnhance
+        enhanced = ImageEnhance.Contrast(enhanced).enhance(1.5)
+        enhanced = ImageEnhance.Sharpness(enhanced).enhance(2.0)
+
+        return enhanced
+    except Exception as e:
+        print(f"Warning: Preprocessing failed, using original image: {e}")
+        return image
+
+
 def extract_text_from_image(image_path: str) -> str:
-    """Extract text from image using OCR."""
+    """Extract text from image using PaddleOCR (primary) or Tesseract (fallback)."""
     try:
         image = Image.open(image_path)
+
+        # Preprocess for colored rows
+        image = preprocess_image_for_ocr(image)
+
+        # Try PaddleOCR first if available (better for colored text)
+        if PADDLEOCR_AVAILABLE:
+            try:
+                print("Using PaddleOCR for text extraction...")
+                ocr = PaddleOCR(use_angle_cls=True, lang='en')
+                result = ocr.ocr(image_path, cls=True)
+
+                # Convert PaddleOCR output to text
+                text_lines = []
+                if result:
+                    for line in result:
+                        if line:
+                            for word_info in line:
+                                text_lines.append(word_info[1][0])  # Extract text
+
+                text = '\n'.join(text_lines)
+                if text.strip():
+                    return text
+            except Exception as e:
+                print(f"PaddleOCR failed, falling back to Tesseract: {e}")
+
+        # Fallback to Tesseract
+        print("Using Tesseract for text extraction...")
         text = pytesseract.image_to_string(image)
         return text
+
     except Exception as e:
         print(f"Error extracting text from {image_path}: {e}")
         return ""
@@ -79,20 +173,48 @@ def extract_text_from_image(image_path: str) -> str:
 def parse_standings(text: str) -> List[Dict[str, any]]:
     """
     Parse Magic: The Gathering tournament standings text from OCR.
+    Handles colored rows that may fragment the output.
 
     Expected format (from the screenshot):
-    RANK NAME POINTS W-L-D OMW%
-    1    Michael Ross  16    5-0-1  56.8%
+    RANK NAME POINTS W-L-D OMW% GW%
+    1    Michael Ross  16    5-0-1  56.8%  62.5%
     """
     lines = text.strip().split('\n')
-    standings = []
+
+    # Phase 1: Group fragmented lines by rank markers (1-50)
+    # Colored rows cause OCR to split a single entry across multiple lines
+    merged_lines = []
+    current_group = []
+
+    rank_pattern = r'^([1-9]|[1-4]\d|50)\s+'
 
     for line in lines:
         line = line.strip()
         if not line or line.upper().startswith('RANK') or line.upper().startswith('MATCH'):
             continue
 
-        parts = line.split()
+        # Check if this line starts with a rank marker
+        if re.match(rank_pattern, line):
+            # New rank marker found - save previous group if it exists
+            if current_group:
+                merged_lines.append(' '.join(current_group))
+            current_group = [line]
+        else:
+            # Continuation of previous entry (orphaned data)
+            current_group.append(line)
+
+    # Don't forget the last group
+    if current_group:
+        merged_lines.append(' '.join(current_group))
+
+    # Phase 2: Parse merged lines
+    standings = []
+    orphaned_records = []
+    orphaned_names = []
+    orphaned_points = []
+
+    for merged_line in merged_lines:
+        parts = merged_line.split()
 
         if len(parts) < 3:
             continue
@@ -106,17 +228,18 @@ def parse_standings(text: str) -> List[Dict[str, any]]:
                 idx = 1
 
             record_pattern = r'\d{1,2}-\d{1,2}(?:-\d{1,2})?'
-            record = None
-            record_idx = None
 
-            for i in range(idx, len(parts)):
-                if re.search(record_pattern, parts[i]):
-                    record = parts[i]
-                    record_idx = i
-                    break
+            # Find all records in this line (there might be orphaned ones)
+            record_matches = []
+            for i, part in enumerate(parts[idx:], start=idx):
+                if re.search(record_pattern, part):
+                    record_matches.append((i, part))
 
-            if not record:
+            if not record_matches:
                 continue
+
+            # Use first record for this entry
+            record_idx, record = record_matches[0]
 
             # Extract points (should be right before the record)
             points = None
@@ -126,41 +249,98 @@ def parse_standings(text: str) -> List[Dict[str, any]]:
                 points_str = parts[points_idx]
                 if points_str.isdigit():
                     points = int(points_str)
-                    # Name is everything between rank and points
                     name_parts = parts[idx:points_idx]
                 else:
-                    # No explicit points, name includes what we thought was points
                     name_parts = parts[idx:record_idx]
             else:
                 name_parts = parts[idx:record_idx]
 
             name = ' '.join(name_parts)
-            # Clean the name to remove emojis and non-alphabetic characters
             name = clean_name(name)
 
-            # If no explicit points found, calculate from record
             if points is None:
                 points = calculate_points(record)
 
-            # Extract OMW% if present (looks for percentage after record)
+            # Extract OMW% and GW% (percentages after record)
             omw = None
-            if record_idx + 1 < len(parts):
-                potential_omw = parts[record_idx + 1]
+            gw = None
+            pct_idx = record_idx + 1
+
+            if pct_idx < len(parts):
+                potential_omw = parts[pct_idx]
                 omw_match = re.search(r'(\d+(?:\.\d+)?)\s*%', potential_omw)
                 if omw_match:
                     omw = float(omw_match.group(1))
+                    pct_idx += 1
+
+            if pct_idx < len(parts):
+                potential_gw = parts[pct_idx]
+                gw_match = re.search(r'(\d+(?:\.\d+)?)\s*%', potential_gw)
+                if gw_match:
+                    gw = float(gw_match.group(1))
 
             if name and record:
                 standings.append({
                     'name': name.strip(),
                     'record': record,
                     'points': points,
-                    'omw': omw
+                    'omw': omw,
+                    'gw': gw
                 })
 
+            # Collect orphaned records (additional records in same line)
+            if len(record_matches) > 1:
+                for orphan_idx, orphan_record in record_matches[1:]:
+                    orphaned_records.append(orphan_record)
+
+            # Collect orphaned names that don't have points before them
+            for i in range(idx, len(parts)):
+                part = parts[i]
+                # If it's a name (not a number or record or percentage)
+                if (not part.isdigit() and
+                    not re.search(record_pattern, part) and
+                    not re.search(r'%', part) and
+                    i not in [idx + j for j in range(len(name_parts))]):
+                    if len(clean_name(part)) > 2:  # Reasonable name length
+                        orphaned_names.append(part)
+
+            # Collect orphaned points (numbers not followed by records)
+            for i, part in enumerate(parts[idx:], start=idx):
+                if part.isdigit() and i + 1 < len(parts):
+                    next_part = parts[i + 1]
+                    if (not re.search(record_pattern, next_part) and
+                        not re.search(r'%', next_part)):
+                        orphaned_points.append(int(part))
+
         except Exception as e:
-            # Skip lines that don't parse
             continue
+
+    # Phase 3: Try to match orphaned data
+    for orphan_record in orphaned_records:
+        # Try to find matching name and points
+        matched = False
+        if orphaned_names:
+            name = clean_name(orphaned_names.pop(0))
+            points = orphaned_points.pop(0) if orphaned_points else calculate_points(orphan_record)
+
+            standings.append({
+                'name': name.strip(),
+                'record': orphan_record,
+                'points': points,
+                'omw': None,
+                'gw': None
+            })
+            matched = True
+
+        if not matched:
+            # At least save the record with a placeholder name
+            standings.append({
+                'name': '[Colored Row - Name Lost]',
+                'record': orphan_record,
+                'points': calculate_points(orphan_record),
+                'omw': None,
+                'gw': None
+            })
 
     return standings
 
@@ -266,7 +446,7 @@ def merge_standings(*files_list) -> List[Dict[str, any]]:
     return list(seen_names.values())
 
 
-def write_csv(standings: List[Dict[str, any]], output_path: str, include_omw: bool = True):
+def write_csv(standings: List[Dict[str, any]], output_path: str, include_omw: bool = True, include_gw: bool = True):
     """Write standings to CSV file."""
     if not standings:
         print("No data to write")
@@ -276,6 +456,8 @@ def write_csv(standings: List[Dict[str, any]], output_path: str, include_omw: bo
     fieldnames = ['name', 'record', 'week', 'points']
     if include_omw:
         fieldnames.append('omw')
+    if include_gw:
+        fieldnames.append('gw')
 
     try:
         with open(output_path, 'w', newline='') as csvfile:
@@ -308,7 +490,7 @@ def write_json(standings: List[Dict[str, any]], output_path: str):
         print(f"Error writing JSON: {e}")
 
 
-def write_excel(standings: List[Dict[str, any]], output_path: str, include_omw: bool = True):
+def write_excel(standings: List[Dict[str, any]], output_path: str, include_omw: bool = True, include_gw: bool = True):
     """Write standings to Excel file."""
     if not standings:
         print("No data to write")
@@ -326,6 +508,8 @@ def write_excel(standings: List[Dict[str, any]], output_path: str, include_omw: 
         headers = ['Name', 'Record', 'Week', 'Points']
         if include_omw:
             headers.append('OMW')
+        if include_gw:
+            headers.append('GW')
 
         # Write headers
         for col, header in enumerate(headers, 1):
@@ -344,6 +528,9 @@ def write_excel(standings: List[Dict[str, any]], output_path: str, include_omw: 
             ws.cell(row=row_idx, column=4).value = entry.get('points', 0)
             if include_omw:
                 ws.cell(row=row_idx, column=5).value = entry.get('omw', '')
+            if include_gw:
+                col_idx = 6 if include_omw else 5
+                ws.cell(row=row_idx, column=col_idx).value = entry.get('gw', '')
 
         # Auto-adjust column widths
         ws.column_dimensions['A'].width = 20
@@ -352,6 +539,9 @@ def write_excel(standings: List[Dict[str, any]], output_path: str, include_omw: 
         ws.column_dimensions['D'].width = 10
         if include_omw:
             ws.column_dimensions['E'].width = 10
+        if include_gw:
+            col_idx = 'F' if include_omw else 'E'
+            ws.column_dimensions[col_idx].width = 10
 
         wb.save(output_path)
         print(f"Excel written to: {output_path}")
@@ -369,6 +559,8 @@ Examples:
   python screenshot_to_csv.py screenshot.png -o standings.xlsx
   python screenshot_to_csv.py screenshot.png -d 9/14/26 -o week.xlsx -s "Store Name"
   python screenshot_to_csv.py img1.png img2.png -o merged.xlsx --json standings.json
+
+If no output path specified, uses: standings_M_D_YY.xlsx (where date is from -d or today)
         '''
     )
 
@@ -380,8 +572,7 @@ Examples:
 
     parser.add_argument(
         '-o', '--output',
-        help='Output Excel file path (default: standings.xlsx)',
-        default='standings.xlsx'
+        help='Output Excel file path (default: standings_M_D_YY.xlsx with date included)'
     )
 
     parser.add_argument(
@@ -405,6 +596,12 @@ Examples:
         help='Exclude OMW%% column from output (default: included)'
     )
 
+    parser.add_argument(
+        '--no-gw',
+        action='store_true',
+        help='Exclude GW%% column from output (default: included)'
+    )
+
     args = parser.parse_args()
 
     all_standings = []
@@ -426,9 +623,19 @@ Examples:
     # Filter out opted-out players
     all_standings = filter_opt_out_players(all_standings)
 
+    # Determine output filename if not specified
+    output_path = args.output
+    if not output_path:
+        # Extract date from standings or use provided date or current
+        week_date = args.date if args.date else get_week_start_date()
+        # Convert M/D/YY to filename format (M_D_YY)
+        week_date_formatted = week_date.replace('/', '_')
+        output_path = f'standings_{week_date_formatted}.xlsx'
+
     # Write Excel (main output format)
     include_omw = not args.no_omw
-    write_excel(all_standings, args.output, include_omw=include_omw)
+    include_gw = not args.no_gw
+    write_excel(all_standings, output_path, include_omw=include_omw, include_gw=include_gw)
 
     # Write JSON if requested
     if args.json:
