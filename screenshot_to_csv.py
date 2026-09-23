@@ -342,29 +342,17 @@ def parse_standings(text: str, debug: bool = False) -> List[Dict[str, any]]:
 
     # Handle any remaining orphaned records (entries without rank numbers)
     # These are likely entries 5-6 that completely lost their rank in fragmentation
-    orphaned_names = []
-
-    # Try to extract orphaned names/data from earlier orphaned entries
-    for entry in orphaned_entries:
-        if 'line_text' in entry:
-            name = clean_name(entry['line_text'])
-            if name and 'record' not in entry:
-                orphaned_names.append({'name': name, 'rank': entry.get('rank')})
-
-    # Match remaining orphaned records with orphaned names
     for record_data in orphaned_records:
-        if orphaned_names:
-            name_data = orphaned_names.pop(0)
-            final_entry = {
-                'name': name_data['name'],
-                'record': record_data['record'],
-                'points': record_data['points'],
-                'omw': record_data['omw'],
-                'gw': record_data['gw']
-            }
-            standings.append(final_entry)
-            if debug:
-                print(f"Debug: Reconstructed orphaned entry: {name_data['name']}, record={record_data['record']}")
+        final_entry = {
+            'name': f"Unknown_Entry",
+            'record': record_data['record'],
+            'points': record_data['points'],
+            'omw': record_data['omw'],
+            'gw': record_data['gw']
+        }
+        standings.append(final_entry)
+        if debug:
+            print(f"Debug: Reconstructed missing entry (no rank): {record_data['record']}, omw={record_data['omw']}, points={record_data['points']}")
 
     return standings
 
