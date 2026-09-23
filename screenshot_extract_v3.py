@@ -351,7 +351,8 @@ def parse_standings(ocr_text: str) -> List[Dict]:
 def merge_standings(all_standings: List[List[Dict]]) -> List[Dict]:
     """
     Merge standings from multiple screenshots, deduplicating by player name.
-    Later entries (from different screenshots) update earlier ones with missing data.
+    Keeps the best (highest points) record for each player.
+    Fills in missing percentages from different screenshots.
     Sorts by points (descending) and reassigns ranks.
     """
     merged = {}
@@ -363,15 +364,16 @@ def merge_standings(all_standings: List[List[Dict]]) -> List[Dict]:
             if name not in merged:
                 merged[name] = entry.copy()
             else:
-                # Update with missing data from new screenshot
+                # Keep the best (highest points) record
+                if entry['points'] > merged[name]['points']:
+                    merged[name]['points'] = entry['points']
+                    merged[name]['record'] = entry['record']
+
+                # Fill in missing percentages from other screenshots
                 if merged[name]['omw'] is None and entry['omw'] is not None:
                     merged[name]['omw'] = entry['omw']
                 if merged[name]['gw'] is None and entry['gw'] is not None:
                     merged[name]['gw'] = entry['gw']
-                if merged[name]['points'] == 0 and entry['points'] > 0:
-                    merged[name]['points'] = entry['points']
-                if not merged[name]['record'] or merged[name]['record'] == '0-0-0':
-                    merged[name]['record'] = entry['record']
 
     # Sort by points (descending), then by name
     result = sorted(merged.values(), key=lambda x: (-x['points'], x['name']))
