@@ -79,61 +79,32 @@ def calculate_points(record: str) -> int:
 
 def preprocess_image_for_ocr(image: Image.Image, debug: bool = False) -> Image.Image:
     """
-    Preprocess image to improve OCR accuracy by neutralizing colored backgrounds.
+    Preprocess image to improve OCR accuracy.
 
-    Colored row backgrounds (purple, blue, etc.) interfere with OCR.
-    This function:
-    1. Detects colored regions using HSV color space
-    2. Neutralizes high-saturation areas (colored backgrounds)
-    3. Enhances contrast to make text more visible
+    Note: Colored row backgrounds are skipped during parsing instead of
+    being processed. This provides cleaner extraction for non-colored entries.
     """
     try:
         import numpy as np
         from PIL import ImageEnhance
 
-        # Convert to numpy array for processing
+        # Simple contrast/sharpness enhancement without color neutralization
+        # This avoids issues with colored row text extraction
         img_array = np.array(image.convert('RGB'))
-
-        # Convert RGB to HSV to detect colored regions
-        # H: 0-180 (hue), S: 0-255 (saturation), V: 0-255 (value)
-        hsv = np.zeros_like(img_array)
-        for i in range(3):
-            hsv[:, :, i] = img_array[:, :, i]
-
-        # Simple saturation detection: pixels with high saturation are "colored"
-        # Calculate saturation manually: S = (max - min) / max
-        max_val = np.max(img_array, axis=2).astype(float)
-        min_val = np.min(img_array, axis=2).astype(float)
-        saturation = np.where(max_val > 0, (max_val - min_val) / max_val, 0)
-
-        # High saturation threshold - detect colored backgrounds
-        # Saturation > 0.3 indicates a colored region
-        colored_mask = saturation > 0.25
-
-        # Neutralize colored regions by converting to grayscale
-        # For colored pixels, use lightness value instead of RGB
-        result = img_array.copy().astype(float)
-        for c in range(3):
-            # Replace colored pixels with average of RGB (grayscale)
-            avg_val = np.mean(img_array, axis=2)
-            result[colored_mask, c] = avg_val[colored_mask]
-
-        # Convert back to uint8
-        result = np.uint8(np.clip(result, 0, 255))
-        preprocessed = Image.fromarray(result, 'RGB')
+        result = Image.fromarray(img_array, 'RGB')
 
         # Enhance contrast to make text stand out more
-        enhancer = ImageEnhance.Contrast(preprocessed)
-        preprocessed = enhancer.enhance(1.5)
+        enhancer = ImageEnhance.Contrast(result)
+        result = enhancer.enhance(1.5)
 
         # Enhance sharpness
-        enhancer = ImageEnhance.Sharpness(preprocessed)
-        preprocessed = enhancer.enhance(2.0)
+        enhancer = ImageEnhance.Sharpness(result)
+        result = enhancer.enhance(2.0)
 
         if debug:
-            print(f"Debug: Image preprocessing applied (neutralized {np.sum(colored_mask)} colored pixels)")
+            print(f"Debug: Image preprocessing applied (basic contrast/sharpness enhancement)")
 
-        return preprocessed
+        return result
 
     except ImportError:
         if debug:
@@ -507,16 +478,11 @@ def parse_standings(text: str, debug: bool = False) -> List[Dict[str, any]]:
         if debug:
             print(f"Debug: Reconstructed orphaned entry: {name}, record={record_data['record']}, omw={record_data['omw']}")
 
-    # Priority 2: Any remaining orphaned records are completely lost colored row entries (no name found)
-    for record_data in orphaned_records:
-        final_entry = {
-            'name': f"[Colored Row - Name Lost]",
-            'record': record_data['record'],
-            'points': record_data['points'],
-            'omw': record_data['omw'],
-            'gw': record_data['gw']
-        }
-        standings.append(final_entry)
+    # Priority 2: Skip remaining orphaned records (colored rows without rank numbers)
+    # These are too unreliable to extract, so we skip them entirely
+    if debug and orphaned_records:
+        print(f"Debug: Skipped {len(orphaned_records)} colored row entries (no rank number, unreliable extraction)")
+    # Don't add them to standings - just skip
         if debug:
             print(f"Debug: Reconstructed lost colored row entry: {record_data['record']}, omw={record_data['omw']}")
 
