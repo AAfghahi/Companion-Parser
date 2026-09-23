@@ -42,25 +42,17 @@ def parse_standings_multicolumn(text: str, debug: bool = False) -> List[Dict[str
 
     # First pass: extract complete standard format entries (rank+name+record on one line)
     fragmented_lines = []
-    std_count = 0
     for line in lines:
         line = line.strip()
         if not line:
             continue
 
         # Check for standard format: starts with rank, has name and record on same line
-        # Use [a-zA-Z] to ensure it's a name (not a digit like "9 3-0-0" fragments)
-        if re.match(r'^\d+\s+[a-zA-Z]', line) and re.search(record_pattern, line):
-            std_count += 1
-            if debug:
-                print(f"Debug: Standard format line {std_count}: {repr(line[:70])}")
+        if re.match(r'^\d+\s+\w', line) and re.search(record_pattern, line):
             # Parse as complete entry
             parts = line.split()
             rank_str = parts[0].rstrip('.')
             rank = int(rank_str) if rank_str.isdigit() else None
-            if debug:
-                print(f"  Parts: {parts}")
-                print(f"  Rank extracted: {rank}")
 
             # Find record
             record = None
@@ -111,8 +103,7 @@ def parse_standings_multicolumn(text: str, debug: bool = False) -> List[Dict[str
                 standings.append(entry)
 
                 if debug:
-                    print(f"Debug: Standard format entry added: rank={rank}, name={repr(name)}, record={record}, Points={points}, OMW%={omw}, GW%={gw}")
-                    print(f"  Entry dict: {entry}")
+                    print(f"Debug: Standard format entry: {name}, {record}, Points={points}, OMW%={omw}, GW%={gw}")
             continue
 
         # Not standard format, keep for fragmented parsing
