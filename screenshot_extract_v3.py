@@ -375,8 +375,14 @@ def merge_standings(all_standings: List[List[Dict]]) -> List[Dict]:
                 if merged[name]['gw'] is None and entry['gw'] is not None:
                     merged[name]['gw'] = entry['gw']
 
-    # Sort by points (descending), then by name
-    result = sorted(merged.values(), key=lambda x: (-x['points'], x['name']))
+    # Sort by points (descending), then GW%, then OMW%, then name
+    # GW% and OMW% default to 0 if not present
+    result = sorted(merged.values(), key=lambda x: (
+        -x['points'],
+        -(x['gw'] if x['gw'] is not None else 0),
+        -(x['omw'] if x['omw'] is not None else 0),
+        x['name']
+    ))
 
     # Reassign ranks after sorting
     for idx, entry in enumerate(result, 1):
