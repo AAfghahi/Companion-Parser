@@ -190,17 +190,22 @@ def parse_standings(text: str, debug: bool = False) -> List[Dict[str, any]]:
                 if points is None:
                     points = calculate_points(record)
 
-                # Extract percentages
+                # Extract percentages after this record
                 omw = None
                 gw = None
                 percentages = []
+                last_percent_idx = record_idx
 
                 for i in range(record_idx + 1, len(parts)):
+                    # Stop if we hit another record pattern (start of orphaned records)
+                    if re.search(record_pattern, parts[i]):
+                        break
                     percent_match = re.search(r'(\d+(?:\.\d+)?)\s*%', parts[i])
                     if percent_match:
                         value = float(percent_match.group(1))
                         if 0 <= value <= 100:
                             percentages.append(value)
+                            last_percent_idx = i
 
                 if len(percentages) >= 1:
                     omw = percentages[0]
@@ -220,6 +225,44 @@ def parse_standings(text: str, debug: bool = False) -> List[Dict[str, any]]:
                     standings.append(entry)
                     if debug:
                         print(f"Debug: Line {line_num} ✓ Parsed: {name.strip()}, Points={points}, OMW%={omw}, GW%={gw}")
+
+                    # Extract orphaned records that appear after this entry on the same line
+                    if last_percent_idx + 1 < len(parts):
+                        remaining_parts = parts[last_percent_idx + 1:]
+                        i = 0
+                        while i < len(remaining_parts):
+                            if re.search(record_pattern, remaining_parts[i]):
+                                orphaned_record = remaining_parts[i]
+                                orphaned_points = None
+                                orphaned_percentages = []
+
+                                # Look for percentages after this record
+                                j = i + 1
+                                while j < len(remaining_parts):
+                                    if re.search(record_pattern, remaining_parts[j]):
+                                        break
+                                    percent_match = re.search(r'(\d+(?:\.\d+)?)\s*%', remaining_parts[j])
+                                    if percent_match:
+                                        value = float(percent_match.group(1))
+                                        if 0 <= value <= 100:
+                                            orphaned_percentages.append(value)
+                                    j += 1
+
+                                orphaned_omw = orphaned_percentages[0] if len(orphaned_percentages) >= 1 else None
+                                orphaned_gw = orphaned_percentages[1] if len(orphaned_percentages) >= 2 else None
+
+                                orphaned_records.append({
+                                    'record': orphaned_record,
+                                    'points': orphaned_points,
+                                    'omw': orphaned_omw,
+                                    'gw': orphaned_gw
+                                })
+                                if debug:
+                                    print(f"Debug: Line {line_num} - Extracted orphaned record: {orphaned_record}, omw={orphaned_omw}, gw={orphaned_gw}")
+                                i = j
+                            else:
+                                i += 1
+
                 # If no name but has rank+record, save for later
                 elif rank and record:
                     orphaned_entries.append({
@@ -260,6 +303,11 @@ def parse_standings(text: str, debug: bool = False) -> List[Dict[str, any]]:
             continue
 
     # Second pass: match orphaned records with orphaned ranks/names
+
+    # Sort orphaned entries by rank
+    orphaned_entries.sort(key=lambda x: x.get('rank', 999))
+
+    # Match orphaned entries (rank with name but no record) with orphaned records
     for entry in orphaned_entries:
         if 'line_text' in entry and orphaned_records:
             # Extract name from line_text
@@ -271,11 +319,52 @@ def parse_standings(text: str, debug: bool = False) -> List[Dict[str, any]]:
                     'record': record_data['record'],
                     'points': record_data['points'],
                     'omw': record_data['omw'],
-                    'gw': record_data['gw']
+                    'gw': record_data['gw'],
+                    'rank': entry.get('rank')
                 }
                 standings.append(final_entry)
                 if debug:
-                    print(f"Debug: Reconstructed entry: {name}, record={record_data['record']}")
+                    print(f"Debug: Reconstructed rank {entry.get('rank')}: {name}, record={record_data['record']}")
+        elif entry.get('rank') and not entry.get('record') and orphaned_records:
+            # Rank with name but no record - match with next orphaned record
+            record_data = orphaned_records.pop(0)
+            final_entry = {
+                'name': entry.get('line_text', f"Unknown_{entry.get('rank')}"),
+                'record': record_data['record'],
+                'points': record_data['points'],
+                'omw': record_data['omw'],
+                'gw': record_data['gw'],
+                'rank': entry.get('rank')
+            }
+            standings.append(final_entry)
+            if debug:
+                print(f"Debug: Reconstructed rank {entry.get('rank')}: record={record_data['record']}")
+
+    # Handle any remaining orphaned records (entries without rank numbers)
+    # These are likely entries 5-6 that completely lost their rank in fragmentation
+    orphaned_names = []
+
+    # Try to extract orphaned names/data from earlier orphaned entries
+    for entry in orphaned_entries:
+        if 'line_text' in entry:
+            name = clean_name(entry['line_text'])
+            if name and 'record' not in entry:
+                orphaned_names.append({'name': name, 'rank': entry.get('rank')})
+
+    # Match remaining orphaned records with orphaned names
+    for record_data in orphaned_records:
+        if orphaned_names:
+            name_data = orphaned_names.pop(0)
+            final_entry = {
+                'name': name_data['name'],
+                'record': record_data['record'],
+                'points': record_data['points'],
+                'omw': record_data['omw'],
+                'gw': record_data['gw']
+            }
+            standings.append(final_entry)
+            if debug:
+                print(f"Debug: Reconstructed orphaned entry: {name_data['name']}, record={record_data['record']}")
 
     return standings
 
