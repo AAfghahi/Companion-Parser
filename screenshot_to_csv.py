@@ -216,40 +216,38 @@ def parse_standings(text: str, debug: bool = False) -> List[Dict[str, any]]:
 
     lines = text.strip().split('\n')
 
-    # Pre-process: merge fragmented lines caused by colored rows
-    # Colored backgrounds break OCR output - data gets split across multiple lines
-    # Strategy: Group all lines until next rank number, merge fragments in each group
+    # Pre-process: Use record patterns (W-L-D) as anchors instead of rank numbers
+    # This is more reliable for fragmented OCR output
+    # Split lines containing multiple records into separate entries
+    record_pattern = r'\d{1,2}-\d{1,2}(?:-\d{1,2})?'
     merged_lines = []
-    current_group = []
 
     for line in lines:
         line = line.strip()
         if not line:
             continue
 
-        parts = line.split()
+        # Find all record patterns in this line
+        records = list(re.finditer(record_pattern, line))
 
-        # Check if this line starts a new entry:
-        # - Begins with a rank number 1-50
-        # - Has at least 2 parts (rank + name/content)
-        is_new_entry = len(parts) >= 2 and parts[0].isdigit() and 1 <= int(parts[0]) <= 50
+        if not records:
+            # No records on this line - might be a header or orphaned data
+            if not any(kw in line.upper() for kw in ['RANK', 'MATCH', 'STANDINGS', 'NAME', 'POINTS', 'ASOF']):
+                merged_lines.append(line)
+            continue
 
-        if is_new_entry:
-            # We found a new entry start
-            if current_group:
-                # Merge the previous group
-                merged_text = ' '.join(current_group)
-                merged_lines.append(merged_text)
-            # Start new group with this line
-            current_group = [line]
+        if len(records) == 1:
+            # Single record - keep line as is
+            merged_lines.append(line)
         else:
-            # Fragment or continuation line - add to current group
-            current_group.append(line)
+            # Multiple records on one line - split by record pattern
+            for i, record_match in enumerate(records):
+                start_pos = 0 if i == 0 else records[i-1].end()
+                end_pos = len(line) if i == len(records) - 1 else records[i+1].start()
 
-    # Don't forget the last group
-    if current_group:
-        merged_text = ' '.join(current_group)
-        merged_lines.append(merged_text)
+                segment = line[start_pos:end_pos].strip()
+                if segment:
+                    merged_lines.append(segment)
 
     standings = []
     orphaned_records = []  # Records without rank/name
