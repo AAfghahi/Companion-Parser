@@ -738,19 +738,42 @@ def write_excel(standings: List[Dict], output_path: str):
 
     for row_idx, entry in enumerate(standings, 2):
         col_idx = 1
-        ws.cell(row=row_idx, column=col_idx).value = entry.get('name', '')
+        # Name (left-aligned)
+        cell = ws.cell(row=row_idx, column=col_idx)
+        cell.value = entry.get('name', '')
+        cell.alignment = Alignment(horizontal="left", vertical="center")
         col_idx += 1
-        ws.cell(row=row_idx, column=col_idx).value = entry.get('record', '')
+
+        # Record (centered)
+        cell = ws.cell(row=row_idx, column=col_idx)
+        cell.value = entry.get('record', '')
+        cell.alignment = Alignment(horizontal="center", vertical="center")
         col_idx += 1
+
         if has_week:
-            ws.cell(row=row_idx, column=col_idx).value = entry.get('week', '')
+            # Week (centered)
+            cell = ws.cell(row=row_idx, column=col_idx)
+            cell.value = entry.get('week', '')
+            cell.alignment = Alignment(horizontal="center", vertical="center")
             col_idx += 1
-        ws.cell(row=row_idx, column=col_idx).value = entry.get('points', 0)
+
+        # Points (centered)
+        cell = ws.cell(row=row_idx, column=col_idx)
+        cell.value = entry.get('points', 0)
+        cell.alignment = Alignment(horizontal="center", vertical="center")
         col_idx += 1
-        ws.cell(row=row_idx, column=col_idx).value = entry.get('omw', '')
+
+        # OMW% (centered)
+        cell = ws.cell(row=row_idx, column=col_idx)
+        cell.value = entry.get('omw', '')
+        cell.alignment = Alignment(horizontal="center", vertical="center")
         col_idx += 1
+
         if has_gw:
-            ws.cell(row=row_idx, column=col_idx).value = entry.get('gw', '')
+            # GW% (centered)
+            cell = ws.cell(row=row_idx, column=col_idx)
+            cell.value = entry.get('gw', '')
+            cell.alignment = Alignment(horizontal="center", vertical="center")
 
     # Auto-adjust column widths
     ws.column_dimensions['A'].width = 20  # Name
