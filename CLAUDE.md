@@ -236,12 +236,16 @@ Environment variables from Vercel settings automatically available to API.
 The `screenshot_to_csv.py` tool extracts Magic: The Gathering tournament standings from screenshots using OCR.
 
 **Extracts:**
-- Player names
+- Player names (including from colored rows)
 - Win-Loss-Draw records (W-L-D format)
 - Match points (auto-calculated or extracted)
 - Week date
 - **OMW% (Opposition Match Win %)**
 - **GW% (Game Win Percentage)** - Third tiebreaker
+
+**OCR Engine:**
+- **PaddleOCR (recommended)** - Superior colored row extraction (~14-16 entries per screenshot)
+- **Tesseract (fallback)** - Auto-used if PaddleOCR unavailable (~4 entries, unreliable on colored rows)
 
 **Tiebreaker Order (Screenshot Tool):**
 1. Match Points (higher is better)
@@ -254,6 +258,19 @@ The `screenshot_to_csv.py` tool extracts Magic: The Gathering tournament standin
 ```
 RANK NAME POINTS W-L-D OMW% GW%
 1    Michael Ross  16    5-0-1  56.8%  62.5%
+5    Arash Afghahi 6     2-1-0  50.0%  55.0%  (colored row - extracted by PaddleOCR)
+```
+
+**Setup:**
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Install PaddleOCR (RECOMMENDED for colored row support)
+# For Windows: See PADDLEOCR_WINDOWS_SETUP.md
+# For Mac/Linux: pip install paddleocr
+
+# If PaddleOCR installation fails, script falls back to Tesseract
 ```
 
 **Usage:**
@@ -264,9 +281,17 @@ python screenshot_to_csv.py standings.png -o standings.xlsx
 # Specify week date
 python screenshot_to_csv.py standings.png -d 9/23/26 -o week.xlsx
 
-# Merge multiple screenshots
+# Merge multiple screenshots (combines data from multiple rounds)
 python screenshot_to_csv.py round1.png round2.png -o merged.xlsx
+
+# Debug mode (shows OCR parsing details)
+python screenshot_to_csv.py standings.png --debug
 ```
+
+**Output:**
+- Excel file with columns: Name, Record, Week, Points, OMW%, GW%
+- Filename includes date: `standings_M_D_YY.xlsx`
+- Sorted by Points (highest first), then OMW%, then GW%
 
 ## Common Tasks
 
