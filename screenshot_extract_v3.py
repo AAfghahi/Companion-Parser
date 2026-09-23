@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 import re
 from typing import List, Dict, Optional
+from datetime import datetime, timedelta
 
 try:
     from PIL import Image, ImageEnhance
@@ -65,6 +66,27 @@ def calculate_points(record: str) -> int:
     losses = int(match.group(2))
     draws = int(match.group(3)) if match.group(3) else 0
     return wins * 3 + draws * 1
+
+
+def get_week_start_date() -> str:
+    """Get the Monday of the current week in M/D/YY format."""
+    today = datetime.now()
+    monday = today - timedelta(days=today.weekday())
+    month = monday.month
+    day = monday.day
+    year = monday.strftime('%y')
+    return f"{month}/{day}/{year}"
+
+
+def parse_date_string(date_str: str) -> datetime:
+    """Parse a date string in M/D/YY or M/D/YYYY format."""
+    try:
+        return datetime.strptime(date_str, '%m/%d/%y')
+    except ValueError:
+        try:
+            return datetime.strptime(date_str, '%m/%d/%Y')
+        except ValueError:
+            raise ValueError(f"Invalid date format: {date_str}. Use M/D/YY or M/D/YYYY")
 
 
 def parse_standings_table_format(lines: List[str], record_pattern: str) -> Optional[List[Dict]]:
@@ -311,6 +333,13 @@ def merge_standings(all_standings: List[List[Dict]]) -> List[Dict]:
     return result
 
 
+def add_week_to_entries(standings: List[Dict], week_date: str) -> List[Dict]:
+    """Add week field to all entries."""
+    for entry in standings:
+        entry['week'] = week_date
+    return standings
+
+
 def write_excel(standings: List[Dict], output_path: str):
     """Write standings to Excel file."""
     if not standings:
@@ -321,7 +350,14 @@ def write_excel(standings: List[Dict], output_path: str):
     ws = wb.active
     ws.title = "Standings"
 
-    headers = ['Rank', 'Name', 'Record', 'Points', 'OMW%', 'GW%']
+    # Check if week field exists in any entry
+    has_week = any('week' in entry for entry in standings)
+
+    headers = ['Rank', 'Name', 'Record', 'Points']
+    if has_week:
+        headers.append('Week')
+    headers.extend(['OMW%', 'GW%'])
+
     for col, header in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col)
         cell.value = header
@@ -330,19 +366,33 @@ def write_excel(standings: List[Dict], output_path: str):
         cell.alignment = Alignment(horizontal="center", vertical="center")
 
     for row_idx, entry in enumerate(standings, 2):
-        ws.cell(row=row_idx, column=1).value = entry.get('rank')
-        ws.cell(row=row_idx, column=2).value = entry.get('name', '')
-        ws.cell(row=row_idx, column=3).value = entry.get('record', '')
-        ws.cell(row=row_idx, column=4).value = entry.get('points', 0)
-        ws.cell(row=row_idx, column=5).value = entry.get('omw', '')
-        ws.cell(row=row_idx, column=6).value = entry.get('gw', '')
+        col_idx = 1
+        ws.cell(row=row_idx, column=col_idx).value = entry.get('rank')
+        col_idx += 1
+        ws.cell(row=row_idx, column=col_idx).value = entry.get('name', '')
+        col_idx += 1
+        ws.cell(row=row_idx, column=col_idx).value = entry.get('record', '')
+        col_idx += 1
+        ws.cell(row=row_idx, column=col_idx).value = entry.get('points', 0)
+        col_idx += 1
+        if has_week:
+            ws.cell(row=row_idx, column=col_idx).value = entry.get('week', '')
+            col_idx += 1
+        ws.cell(row=row_idx, column=col_idx).value = entry.get('omw', '')
+        col_idx += 1
+        ws.cell(row=row_idx, column=col_idx).value = entry.get('gw', '')
 
     ws.column_dimensions['A'].width = 8
     ws.column_dimensions['B'].width = 20
     ws.column_dimensions['C'].width = 12
     ws.column_dimensions['D'].width = 10
-    ws.column_dimensions['E'].width = 10
-    ws.column_dimensions['F'].width = 10
+    if has_week:
+        ws.column_dimensions['E'].width = 12
+        ws.column_dimensions['F'].width = 10
+        ws.column_dimensions['G'].width = 10
+    else:
+        ws.column_dimensions['E'].width = 10
+        ws.column_dimensions['F'].width = 10
 
     wb.save(output_path)
     print(f"✓ Excel written: {output_path}")
@@ -350,12 +400,26 @@ def write_excel(standings: List[Dict], output_path: str):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Extract MTG standings from screenshots (supports multiple files)')
+    parser = argparse.ArgumentParser(
+        description='Extract MTG standings from screenshots (supports multiple files)',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog='''
+Examples:
+  python screenshot_extract_v3.py screenshot.png
+  python screenshot_extract_v3.py screenshot.png -d 9/14/26
+  python screenshot_extract_v3.py img1.png img2.png -o merged.xlsx
+  python screenshot_extract_v3.py img1.png img2.png -d 9/21/26 --debug
+        '''
+    )
     parser.add_argument('images', nargs='+', help='Screenshot image file(s)')
-    parser.add_argument('-o', '--output', help='Output Excel file')
+    parser.add_argument('-o', '--output', help='Output Excel file (default: standings_M_D_YY.xlsx with date)')
+    parser.add_argument('-d', '--date', help='Week start date in M/D/YY format (default: current week Monday)')
     parser.add_argument('--debug', action='store_true', help='Show debug output')
 
     args = parser.parse_args()
+
+    # Determine week date
+    week_date = args.date if args.date else get_week_start_date()
 
     all_standings = []
 
@@ -385,16 +449,19 @@ def main():
     # Merge all standings and deduplicate
     merged_standings = merge_standings(all_standings)
 
+    # Add week field to all entries
+    merged_standings = add_week_to_entries(merged_standings, week_date)
+
     if args.debug:
         print(f"\nDebug: After merge and dedup: {len(merged_standings)} unique entries")
 
-    # Determine output filename
+    # Determine output filename if not specified
     if args.output:
         output_file = args.output
-    elif len(args.images) == 1:
-        output_file = "standings_extract_v3.xlsx"
     else:
-        output_file = "standings_merged.xlsx"
+        # Auto-generate filename: standings_M_D_YY.xlsx
+        week_date_formatted = week_date.replace('/', '_')
+        output_file = f'standings_{week_date_formatted}.xlsx'
 
     write_excel(merged_standings, output_file)
 
