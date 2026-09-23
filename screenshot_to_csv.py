@@ -310,9 +310,20 @@ def parse_standings(text: str, debug: bool = False) -> List[Dict[str, any]]:
     # Match orphaned entries (rank with name but no record) with orphaned records
     for entry in orphaned_entries:
         if 'line_text' in entry and orphaned_records:
-            # Extract name from line_text
-            name = clean_name(entry['line_text'])
-            if name and orphaned_records:
+            # Extract name from line_text, but split on corrupted rank markers (single letters O, l, I)
+            line_text = entry['line_text']
+            # Try to detect corrupted rank markers in the middle of names
+            parts_split = re.split(r'\s+([OlI])\s+', line_text)
+
+            if len(parts_split) > 1:
+                # Found a potential corrupted rank marker - take first part as name
+                name = clean_name(parts_split[0])
+                if debug:
+                    print(f"Debug: Split corrupted rank in '{line_text[:50]}' → name='{name}'")
+            else:
+                name = clean_name(line_text)
+
+            if name:
                 record_data = orphaned_records.pop(0)
                 final_entry = {
                     'name': name,
