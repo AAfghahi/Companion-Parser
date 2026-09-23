@@ -227,6 +227,43 @@ Environment variables from Vercel settings automatically available to API.
 - All tables allow SELECT for `public` role (unauthenticated reads)
 - No anonymous writes (Make.com uses service role for inserts)
 
+## Screenshot OCR Tool
+
+### Features
+
+The `screenshot_to_csv.py` tool extracts Magic: The Gathering tournament standings from screenshots using OCR.
+
+**Extracts:**
+- Player names
+- Win-Loss-Draw records (W-L-D format)
+- Match points (auto-calculated or extracted)
+- Week date
+- **OMW% (Opposition Match Win %)**
+- **GW% (Game Win Percentage)** - Third tiebreaker
+
+**Tiebreaker Order:**
+1. Match Points (higher is better)
+2. OMW% (Opposition Match Win %)
+3. GW% (Game Win %)
+
+**Expected screenshot format:**
+```
+RANK NAME POINTS W-L-D OMW% GW%
+1    Michael Ross  16    5-0-1  56.8%  62.5%
+```
+
+**Usage:**
+```bash
+# Extract from single screenshot
+python screenshot_to_csv.py standings.png -o standings.xlsx
+
+# Specify week date
+python screenshot_to_csv.py standings.png -d 9/23/26 -o week.xlsx
+
+# Merge multiple screenshots
+python screenshot_to_csv.py round1.png round2.png -o merged.xlsx
+```
+
 ## Common Tasks
 
 ### Add a new season

@@ -81,8 +81,10 @@ def parse_standings(text: str) -> List[Dict[str, any]]:
     Parse Magic: The Gathering tournament standings text from OCR.
 
     Expected format (from the screenshot):
-    RANK NAME POINTS W-L-D OMW%
-    1    Michael Ross  16    5-0-1  56.8%
+    RANK NAME POINTS W-L-D OMW% GW%
+    1    Michael Ross  16    5-0-1  56.8%  62.5%
+
+    Tiebreakers (in order): Points → OMW% → GW%
     """
     lines = text.strip().split('\n')
     standings = []
@@ -144,18 +146,27 @@ def parse_standings(text: str) -> List[Dict[str, any]]:
 
             # Extract OMW% if present (looks for percentage after record)
             omw = None
+            gw = None
             if record_idx + 1 < len(parts):
                 potential_omw = parts[record_idx + 1]
                 omw_match = re.search(r'(\d+(?:\.\d+)?)\s*%', potential_omw)
                 if omw_match:
                     omw = float(omw_match.group(1))
 
+            # Extract GW% if present (looks for percentage after OMW%)
+            if record_idx + 2 < len(parts):
+                potential_gw = parts[record_idx + 2]
+                gw_match = re.search(r'(\d+(?:\.\d+)?)\s*%', potential_gw)
+                if gw_match:
+                    gw = float(gw_match.group(1))
+
             if name and record:
                 standings.append({
                     'name': name.strip(),
                     'record': record,
                     'points': points,
-                    'omw': omw
+                    'omw': omw,
+                    'gw': gw
                 })
 
         except Exception as e:
@@ -275,7 +286,7 @@ def write_csv(standings: List[Dict[str, any]], output_path: str, include_omw: bo
     # Define CSV columns
     fieldnames = ['name', 'record', 'week', 'points']
     if include_omw:
-        fieldnames.append('omw')
+        fieldnames.extend(['omw', 'gw'])
 
     try:
         with open(output_path, 'w', newline='') as csvfile:
@@ -325,7 +336,7 @@ def write_excel(standings: List[Dict[str, any]], output_path: str, include_omw: 
         # Define headers
         headers = ['Name', 'Record', 'Week', 'Points']
         if include_omw:
-            headers.append('OMW')
+            headers.extend(['OMW%', 'GW%'])
 
         # Write headers
         for col, header in enumerate(headers, 1):
@@ -344,6 +355,7 @@ def write_excel(standings: List[Dict[str, any]], output_path: str, include_omw: 
             ws.cell(row=row_idx, column=4).value = entry.get('points', 0)
             if include_omw:
                 ws.cell(row=row_idx, column=5).value = entry.get('omw', '')
+                ws.cell(row=row_idx, column=6).value = entry.get('gw', '')
 
         # Auto-adjust column widths
         ws.column_dimensions['A'].width = 20
@@ -352,6 +364,7 @@ def write_excel(standings: List[Dict[str, any]], output_path: str, include_omw: 
         ws.column_dimensions['D'].width = 10
         if include_omw:
             ws.column_dimensions['E'].width = 10
+            ws.column_dimensions['F'].width = 10
 
         wb.save(output_path)
         print(f"Excel written to: {output_path}")
