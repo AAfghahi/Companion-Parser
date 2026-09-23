@@ -1,5 +1,7 @@
 Pillow>=10.0.0
 pytesseract>=0.3.10
 openpyxl>=3.0.0
-paddleocr>=2.7.0
-paddlepaddle>=2.5.0
+# PaddleOCR for robust colored text recognition (optional, improves colored row detection)
+# Install with: pip install paddleocr
+# For Windows: pip install paddlepaddle paddleocr
+# For Mac/Linux: pip install paddlepaddle paddleocr
