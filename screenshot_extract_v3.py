@@ -182,6 +182,8 @@ def parse_standings_table_format(lines: List[str], record_pattern: str) -> Optio
     standings = []
     orphaned_records = []  # Records without associated names (from colored rows)
     orphaned_names = []    # Names without associated records (from colored rows)
+    standalone_names = []  # Names with no rank or record (separate line)
+    standalone_ranks = []  # Rank numbers with no name or record (separate line)
     last_complete_rank = 0
 
     for line in lines[header_idx + 1:]:
@@ -217,11 +219,25 @@ def parse_standings_table_format(lines: List[str], record_pattern: str) -> Optio
 
         rank_match = re.match(r'^(\d{1,2})[.\s]+', line_fixed)
         if not rank_match:
-            # No rank at start: might be orphaned record or orphaned name
+            # No rank at start: might be orphaned record, orphaned name, or standalone rank/name
             records = re.findall(record_pattern, line)
             if records:
                 # Orphaned record line (has record but no rank/name)
                 orphaned_records.append((records[0], line))
+                continue
+
+            # Check if line is just a rank number (e.g., "6" or "7")
+            if re.match(r'^\d{1,2}$', line.strip()):
+                standalone_ranks.append(int(line.strip()))
+                continue
+
+            # Check if line is a name (has letters but no digits/records)
+            if any(c.isalpha() for c in line) and not re.search(r'\d{1,2}-\d{1,2}', line):
+                name = clean_name(line)
+                if name and len(name) > 1:
+                    standalone_names.append(name)
+                continue
+
             continue
 
         rank = int(rank_match.group(1))
@@ -273,6 +289,37 @@ def parse_standings_table_format(lines: List[str], record_pattern: str) -> Optio
                     'omw': omw,
                     'gw': gw
                 })
+
+    # Recover standalone names paired with standalone ranks
+    if standalone_names and standalone_ranks:
+        num_standalone_pairs = min(len(standalone_names), len(standalone_ranks))
+        for i in range(num_standalone_pairs):
+            rank = standalone_ranks[i]
+            name = standalone_names[i]
+
+            # Try to find a matching record for this rank
+            # Look through orphaned_records for a match
+            matching_record = None
+            matching_idx = None
+            for j, (record, _) in enumerate(orphaned_records):
+                # Assume records are in order, so match by position
+                if j == i:
+                    matching_record = record
+                    matching_idx = j
+                    break
+
+            if matching_record:
+                points = calculate_points(matching_record)
+                standings.append({
+                    'rank': rank,
+                    'name': name,
+                    'record': matching_record,
+                    'points': points,
+                    'omw': None,
+                    'gw': None
+                })
+                if matching_idx is not None:
+                    orphaned_records.pop(matching_idx)
 
     # Recover orphaned data: match orphaned names with orphaned records
     # Handle both matched pairs and unmatched records/names
