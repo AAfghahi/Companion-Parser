@@ -168,7 +168,7 @@ def parse_date_string(date_str: str) -> datetime:
 
 
 def parse_standings_table_format(lines: List[str], record_pattern: str) -> Optional[List[Dict]]:
-    """Parse table format with complete rows (Rank, Name, Points, Record, Percentages on same line)."""
+    """Parse table format with complete rows, and recover orphaned names/records from colored rows."""
 
     header_idx = -1
     for i, line in enumerate(lines):
@@ -180,6 +180,9 @@ def parse_standings_table_format(lines: List[str], record_pattern: str) -> Optio
         return None
 
     standings = []
+    orphaned_records = []  # Records without associated names (from colored rows)
+    orphaned_names = []    # Names without associated records (from colored rows)
+    last_complete_rank = 0
 
     for line in lines[header_idx + 1:]:
         line_upper = line.upper()
@@ -195,8 +198,15 @@ def parse_standings_table_format(lines: List[str], record_pattern: str) -> Optio
         # Extract rank (should be first number)
         rank_match = re.match(r'^(\d{1,2})[.\s]+', line)
         if not rank_match:
+            # No rank at start: might be orphaned record or orphaned name
+            records = re.findall(record_pattern, line)
+            if records:
+                # Orphaned record line (has record but no rank/name)
+                orphaned_records.append((records[0], line))
             continue
+
         rank = int(rank_match.group(1))
+        last_complete_rank = rank
 
         # Remove rank from line for further processing
         line_without_rank = re.sub(r'^\d{1,2}[.\s]+', '', line).strip()
@@ -204,7 +214,10 @@ def parse_standings_table_format(lines: List[str], record_pattern: str) -> Optio
         # Extract all records from the line
         records = re.findall(record_pattern, line)
         if not records:
+            # No record: might be orphaned name
+            orphaned_names.append((rank, line_without_rank))
             continue
+
         record = records[0]
 
         # Extract all percentages from the line
@@ -235,6 +248,21 @@ def parse_standings_table_format(lines: List[str], record_pattern: str) -> Optio
                     'points': points,
                     'omw': omw,
                     'gw': gw
+                })
+
+    # Recover orphaned data: match orphaned names with orphaned records 1-to-1
+    if orphaned_names and orphaned_records:
+        for (rank, name_text), (record, _) in zip(orphaned_names, orphaned_records):
+            name = clean_name(name_text)
+            if name and len(name) > 1:
+                points = calculate_points(record)
+                standings.append({
+                    'rank': rank,
+                    'name': name,
+                    'record': record,
+                    'points': points,
+                    'omw': None,
+                    'gw': None
                 })
 
     return standings if standings else None
