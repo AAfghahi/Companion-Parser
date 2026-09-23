@@ -210,6 +210,10 @@ def parse_standings(text: str, debug: bool = False) -> List[Dict[str, any]]:
 
     Tiebreakers (in order): Points → OMW% → GW%
     """
+    # Clean up problematic Unicode characters that cause encoding issues
+    # Remove checkmarks, bullets, and other special characters
+    text = text.encode('ascii', 'ignore').decode('ascii')
+
     lines = text.strip().split('\n')
 
     # Pre-process: merge fragmented lines caused by colored rows
