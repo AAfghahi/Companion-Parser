@@ -250,9 +250,14 @@ def parse_standings_table_format(lines: List[str], record_pattern: str) -> Optio
                     'gw': gw
                 })
 
-    # Recover orphaned data: match orphaned names with orphaned records 1-to-1
-    if orphaned_names and orphaned_records:
-        for (rank, name_text), (record, _) in zip(orphaned_names, orphaned_records):
+    # Recover orphaned data: match orphaned names with orphaned records
+    # Handle both matched pairs and unmatched records/names
+    if orphaned_names or orphaned_records:
+        # First, pair up orphaned names with orphaned records (1-to-1)
+        num_pairs = min(len(orphaned_names), len(orphaned_records))
+        for i in range(num_pairs):
+            rank, name_text = orphaned_names[i]
+            record, _ = orphaned_records[i]
             name = clean_name(name_text)
             if name and len(name) > 1:
                 points = calculate_points(record)
@@ -265,10 +270,24 @@ def parse_standings_table_format(lines: List[str], record_pattern: str) -> Optio
                     'gw': None
                 })
 
+        # Handle unmatched records (more records than names)
+        if len(orphaned_records) > num_pairs:
+            for i in range(num_pairs, len(orphaned_records)):
+                record, _ = orphaned_records[i]
+                # Use a placeholder name - will be recovered by fuzzy matching later
+                standings.append({
+                    'rank': last_complete_rank + i - num_pairs + 1,
+                    'name': f'Unknown_{i+1}',
+                    'record': record,
+                    'points': calculate_points(record),
+                    'omw': None,
+                    'gw': None
+                })
+
     return standings if standings else None
 
 
-def parse_standings_debug(ocr_text: str) -> tuple[List[Dict], dict]:
+def parse_standings_debug(ocr_text: str) -> tuple[List[Dict], dict]:  # type: ignore
     """Parse standings and return debug info about orphaned data."""
     lines = [line.strip() for line in ocr_text.split('\n') if line.strip()]
     record_pattern = r'\d{1,2}-\d{1,2}(?:-\d{1,2})?'
