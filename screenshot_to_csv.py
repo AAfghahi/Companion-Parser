@@ -433,7 +433,9 @@ def parse_standings(text: str, debug: bool = False) -> List[Dict[str, any]]:
 
         except Exception as e:
             if debug:
-                print(f"Debug: Exception on line {line_num}: {e}")
+                # Sanitize error message to avoid encoding issues
+                error_msg = str(e).encode('ascii', 'ignore').decode('ascii')
+                print(f"Debug: Exception on line {line_num}: {error_msg}")
             continue
 
     # Second pass: match orphaned records with orphaned ranks/names
