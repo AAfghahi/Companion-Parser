@@ -65,10 +65,82 @@ def calculate_points(record: str) -> int:
     return points
 
 
+def preprocess_image_for_ocr(image: Image.Image, debug: bool = False) -> Image.Image:
+    """
+    Preprocess image to improve OCR accuracy by neutralizing colored backgrounds.
+
+    Colored row backgrounds (purple, blue, etc.) interfere with OCR.
+    This function:
+    1. Detects colored regions using HSV color space
+    2. Neutralizes high-saturation areas (colored backgrounds)
+    3. Enhances contrast to make text more visible
+    """
+    try:
+        import numpy as np
+        from PIL import ImageEnhance
+
+        # Convert to numpy array for processing
+        img_array = np.array(image.convert('RGB'))
+
+        # Convert RGB to HSV to detect colored regions
+        # H: 0-180 (hue), S: 0-255 (saturation), V: 0-255 (value)
+        hsv = np.zeros_like(img_array)
+        for i in range(3):
+            hsv[:, :, i] = img_array[:, :, i]
+
+        # Simple saturation detection: pixels with high saturation are "colored"
+        # Calculate saturation manually: S = (max - min) / max
+        max_val = np.max(img_array, axis=2).astype(float)
+        min_val = np.min(img_array, axis=2).astype(float)
+        saturation = np.where(max_val > 0, (max_val - min_val) / max_val, 0)
+
+        # High saturation threshold - detect colored backgrounds
+        # Saturation > 0.3 indicates a colored region
+        colored_mask = saturation > 0.25
+
+        # Neutralize colored regions by converting to grayscale
+        # For colored pixels, use lightness value instead of RGB
+        result = img_array.copy().astype(float)
+        for c in range(3):
+            # Replace colored pixels with average of RGB (grayscale)
+            avg_val = np.mean(img_array, axis=2)
+            result[colored_mask, c] = avg_val[colored_mask]
+
+        # Convert back to uint8
+        result = np.uint8(np.clip(result, 0, 255))
+        preprocessed = Image.fromarray(result, 'RGB')
+
+        # Enhance contrast to make text stand out more
+        enhancer = ImageEnhance.Contrast(preprocessed)
+        preprocessed = enhancer.enhance(1.5)
+
+        # Enhance sharpness
+        enhancer = ImageEnhance.Sharpness(preprocessed)
+        preprocessed = enhancer.enhance(2.0)
+
+        if debug:
+            print(f"Debug: Image preprocessing applied (neutralized {np.sum(colored_mask)} colored pixels)")
+
+        return preprocessed
+
+    except ImportError:
+        if debug:
+            print("Debug: NumPy not available, skipping advanced preprocessing")
+        return image
+    except Exception as e:
+        if debug:
+            print(f"Debug: Preprocessing error: {e}, using original image")
+        return image
+
+
 def extract_text_from_image(image_path: str, debug: bool = False) -> str:
-    """Extract text from image using OCR."""
+    """Extract text from image using OCR with preprocessing."""
     try:
         image = Image.open(image_path)
+
+        # Preprocess image to remove colored backgrounds
+        image = preprocess_image_for_ocr(image, debug=debug)
+
         text = pytesseract.image_to_string(image)
         if debug:
             print(f"Debug: OCR extracted {len(text)} characters")
