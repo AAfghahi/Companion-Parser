@@ -234,6 +234,7 @@ def parse_standings_table_format(lines: List[str], record_pattern: str) -> Optio
     orphaned_records = []  # Records without associated names (from colored rows)
     orphaned_names = []    # Names without associated records (from colored rows) - just the names
     standalone_names = []  # Names with no rank or record (separate line)
+    standalone_ranks = []  # Ranks on separate lines (not used, kept for compatibility)
     last_complete_rank = 0
 
     for line in lines[header_idx + 1:]:
