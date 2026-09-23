@@ -43,6 +43,7 @@ export default function SeasonHistory() {
       record: item.record || item[1],
       points: item.points || parseInt(item[2]),
       week: item.week || item[3],
+      gwPercent: item.gwPercent || item[4],
       omwPercent: item.omwPercent || item[5]
     }));
 
@@ -50,8 +51,16 @@ export default function SeasonHistory() {
       data = data.filter(s => s.week === weekFilter);
     }
 
-    // Sort by points descending and assign ranks first
-    data = data.sort((a, b) => b.points - a.points);
+    // Sort by points (desc) → GW% (desc) → OMW% (desc)
+    data = data.sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      const bGw = parseFloat(b.gwPercent) || 0;
+      const aGw = parseFloat(a.gwPercent) || 0;
+      if (bGw !== aGw) return bGw - aGw;
+      const bOmw = parseFloat(b.omwPercent) || 0;
+      const aOmw = parseFloat(a.omwPercent) || 0;
+      return bOmw - aOmw;
+    });
     data = data.map((item, idx) => ({
       ...item,
       rank: idx + 1
@@ -76,13 +85,17 @@ export default function SeasonHistory() {
     seasonData.slice(1).forEach(entry => {
       const name = entry.name || entry[0];
       const points = entry.points || parseInt(entry[2]);
-      const omwPercent = entry.omwPercent || entry[4];
+      const gwPercent = entry.gwPercent || entry[4];
+      const omwPercent = entry.omwPercent || entry[5];
 
       if (!playerStats[name]) {
-        playerStats[name] = { name, total: 0, count: 0, omwTotal: 0 };
+        playerStats[name] = { name, total: 0, count: 0, gwTotal: 0, omwTotal: 0 };
       }
       playerStats[name].total += points;
       playerStats[name].count += 1;
+      if (gwPercent) {
+        playerStats[name].gwTotal += parseFloat(gwPercent);
+      }
       if (omwPercent) {
         playerStats[name].omwTotal += parseFloat(omwPercent);
       }
@@ -92,9 +105,18 @@ export default function SeasonHistory() {
       .map(player => ({
         ...player,
         avg: (player.total / player.count).toFixed(1),
+        gwPercent: player.gwTotal > 0 ? (player.gwTotal / player.count).toFixed(1) : '-',
         omwPercent: player.omwTotal > 0 ? (player.omwTotal / player.count).toFixed(1) : '-'
       }))
-      .sort((a, b) => b.total - a.total);
+      .sort((a, b) => {
+        if (b.total !== a.total) return b.total - a.total;
+        const bGw = parseFloat(b.gwPercent) || 0;
+        const aGw = parseFloat(a.gwPercent) || 0;
+        if (bGw !== aGw) return bGw - aGw;
+        const bOmw = parseFloat(b.omwPercent) || 0;
+        const aOmw = parseFloat(a.omwPercent) || 0;
+        return bOmw - aOmw;
+      });
 
     return leaderboard.map((player, idx) => ({ ...player, rank: idx + 1 }));
   }, [seasonData]);
@@ -190,6 +212,7 @@ export default function SeasonHistory() {
                     <th>Rank</th>
                     <th>Player Name</th>
                     <th>Points</th>
+                    <th>GW%</th>
                     <th>Record</th>
                     <th>OMW%</th>
                   </tr>
@@ -201,13 +224,14 @@ export default function SeasonHistory() {
                         <td>{entry.rank}</td>
                         <td>{entry.name}</td>
                         <td><strong>{entry.points}</strong></td>
+                        <td>{entry.gwPercent || '-'}</td>
                         <td>{entry.record || '-'}</td>
                         <td>{entry.omwPercent || '-'}</td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
+                      <td colSpan="6" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
                         No data available
                       </td>
                     </tr>
@@ -246,6 +270,7 @@ export default function SeasonHistory() {
                     <th>Total Points</th>
                     <th>Tournaments</th>
                     <th>Avg Points</th>
+                    <th>GW%</th>
                     <th>OMW%</th>
                   </tr>
                 </thead>
@@ -258,12 +283,13 @@ export default function SeasonHistory() {
                         <td><strong>{player.total}</strong></td>
                         <td>{player.count}</td>
                         <td>{player.avg}</td>
+                        <td>{player.gwPercent || '-'}</td>
                         <td>{player.omwPercent || '-'}</td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="6" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
+                      <td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
                         No data available
                       </td>
                     </tr>

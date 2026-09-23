@@ -42,6 +42,7 @@ User sees Dashboard (current) or SeasonHistory (past)
 - `record` (text) - W-L-D format
 - `points` (int4) - calculated match points
 - `week` (text) - week date (M/D/YY format)
+- `gwPercent` (numeric) - game win percentage
 - `omwPercent` (numeric) - opposition match win percentage
 - `created_at` (timestamp) - auto-created on sync
 
@@ -102,7 +103,7 @@ The Vercel API reads these variables to authenticate with Supabase.
 **Get current standings:**
 ```
 GET /api/standings
-Response: [{"name": "...", "record": "...", "points": 9, "week": "9/14/26", "omwPercent": 55.60}, ...]
+Response: [{"name": "...", "record": "...", "points": 9, "week": "9/14/26", "gwPercent": 62.5, "omwPercent": 55.60}, ...]
 ```
 
 **Get archived season data:**
@@ -124,16 +125,17 @@ Uses Supabase client to query tables directly. Environment variables required.
 ### Pages
 
 **Dashboard** (`/`) - Current season
-- Weekly scores with week filter and player search
-- Leaderboard with total points, tournaments, average, and OMW%
+- Weekly scores with week filter and player search (columns: Rank, Player, Points, GW%, Record, OMW%)
+- Leaderboard with total points, tournaments, average, GW%, and OMW%
 - Report discrepancy modal (sends to Discord webhook)
 - Caches data for 8 hours
+- Tiebreaker order: Points → GW% → OMW%
 
 **Season History** (`/#/seasons`) - Past seasons
 - Season dropdown selector
-- Weekly scores and leaderboard from archived `season_data`
+- Weekly scores (columns: Rank, Player, Points, GW%, Record, OMW%) and leaderboard from archived `season_data`
 - Same filters and features as Dashboard
-- OMW% column on leaderboard
+- Tiebreaker order: Points → GW% → OMW% (same as Dashboard)
 
 ### StandingsContext
 
@@ -241,10 +243,12 @@ The `screenshot_to_csv.py` tool extracts Magic: The Gathering tournament standin
 - **OMW% (Opposition Match Win %)**
 - **GW% (Game Win Percentage)** - Third tiebreaker
 
-**Tiebreaker Order:**
+**Tiebreaker Order (Screenshot Tool):**
 1. Match Points (higher is better)
 2. OMW% (Opposition Match Win %)
 3. GW% (Game Win %)
+
+*Note: The web app (Dashboard and Season History) uses a different tiebreaker order: Points → GW% → OMW% (GW% is second tiebreaker)*
 
 **Expected screenshot format:**
 ```

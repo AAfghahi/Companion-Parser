@@ -42,7 +42,7 @@ export default async function handler(req, res) {
     if (req.query.season) {
       const { data, error } = await supabase
         .from('season_data')
-        .select('name, record, points, week, omwPercent')
+        .select('name, record, points, week, omwPercent, gwPercent')
         .eq('season_name', req.query.season)
         .order('week', { ascending: false });
 
@@ -53,7 +53,7 @@ export default async function handler(req, res) {
     // Get current standings
     const { data, error } = await supabase
       .from('standings')
-      .select('name, record, points, week, omwPercent')
+      .select('name, record, points, week, omwPercent, gwPercent')
       .order('week', { ascending: false });
 
     if (error) throw error;

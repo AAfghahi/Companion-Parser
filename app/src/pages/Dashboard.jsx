@@ -53,8 +53,16 @@ export default function Dashboard() {
       data = data.filter(s => s.week === weekFilter);
     }
 
-    // Sort by points descending and assign ranks first
-    data = data.sort((a, b) => b.points - a.points);
+    // Sort by points (desc) → GW% (desc) → OMW% (desc)
+    data = data.sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      const bGw = parseFloat(b.gwPercent) || 0;
+      const aGw = parseFloat(a.gwPercent) || 0;
+      if (bGw !== aGw) return bGw - aGw;
+      const bOmw = parseFloat(b.omwPercent) || 0;
+      const aOmw = parseFloat(a.omwPercent) || 0;
+      return bOmw - aOmw;
+    });
     data = data.map((item, idx) => ({
       ...item,
       rank: idx + 1
@@ -82,7 +90,8 @@ export default function Dashboard() {
           name: entry.name,
           total: 0,
           count: 0,
-          omwTotal: 0
+          omwTotal: 0,
+          gwTotal: 0
         };
       }
       playerStats[entry.name].total += entry.points;
@@ -90,15 +99,27 @@ export default function Dashboard() {
       if (entry.omwPercent) {
         playerStats[entry.name].omwTotal += parseFloat(entry.omwPercent);
       }
+      if (entry.gwPercent) {
+        playerStats[entry.name].gwTotal += parseFloat(entry.gwPercent);
+      }
     });
 
     const leaderboard = Object.values(playerStats)
       .map(player => ({
         ...player,
         avg: (player.total / player.count).toFixed(1),
+        gwPercent: player.gwTotal > 0 ? (player.gwTotal / player.count).toFixed(1) : '-',
         omwPercent: player.omwTotal > 0 ? (player.omwTotal / player.count).toFixed(1) : '-'
       }))
-      .sort((a, b) => b.total - a.total);
+      .sort((a, b) => {
+        if (b.total !== a.total) return b.total - a.total;
+        const bGw = parseFloat(b.gwPercent) || 0;
+        const aGw = parseFloat(a.gwPercent) || 0;
+        if (bGw !== aGw) return bGw - aGw;
+        const bOmw = parseFloat(b.omwPercent) || 0;
+        const aOmw = parseFloat(a.omwPercent) || 0;
+        return bOmw - aOmw;
+      });
 
     return leaderboard.map((player, idx) => ({
       ...player,
@@ -261,6 +282,7 @@ export default function Dashboard() {
               <th>Rank</th>
               <th>Player Name</th>
               <th>Points</th>
+              <th>GW%</th>
               <th>Record</th>
               <th>OMW%</th>
             </tr>
@@ -272,13 +294,14 @@ export default function Dashboard() {
                   <td>{entry.rank}</td>
                   <td>{entry.name}</td>
                   <td><strong>{entry.points}</strong></td>
+                  <td>{entry.gwPercent || '-'}</td>
                   <td>{entry.record || '-'}</td>
                   <td>{entry.omwPercent || '-'}</td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
+                <td colSpan="6" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
                   No data available
                 </td>
               </tr>
@@ -330,6 +353,7 @@ export default function Dashboard() {
               <th>Total Points</th>
               <th>Tournaments</th>
               <th>Avg Points</th>
+              <th>GW%</th>
               <th>OMW%</th>
             </tr>
           </thead>
@@ -342,12 +366,13 @@ export default function Dashboard() {
                   <td><strong>{player.total}</strong></td>
                   <td>{player.count}</td>
                   <td>{player.avg}</td>
+                  <td>{player.gwPercent || '-'}</td>
                   <td>{player.omwPercent || '-'}</td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="6" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
+                <td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
                   No data available
                 </td>
               </tr>
