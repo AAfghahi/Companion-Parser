@@ -282,9 +282,9 @@ export default function Dashboard() {
               <th>Rank</th>
               <th>Player Name</th>
               <th>Points</th>
-              <th>GW%</th>
               <th>Record</th>
               <th>OMW%</th>
+              <th>GW%</th>
             </tr>
           </thead>
           <tbody>
@@ -294,9 +294,9 @@ export default function Dashboard() {
                   <td>{entry.rank}</td>
                   <td>{entry.name}</td>
                   <td><strong>{entry.points}</strong></td>
-                  <td>{entry.gwPercent || '-'}</td>
                   <td>{entry.record || '-'}</td>
                   <td>{entry.omwPercent || '-'}</td>
+                  <td>{entry.gwPercent || '-'}</td>
                 </tr>
               ))
             ) : (
@@ -353,8 +353,8 @@ export default function Dashboard() {
               <th>Total Points</th>
               <th>Tournaments</th>
               <th>Avg Points</th>
-              <th>GW%</th>
               <th>OMW%</th>
+              <th>GW%</th>
             </tr>
           </thead>
           <tbody>
@@ -366,8 +366,8 @@ export default function Dashboard() {
                   <td><strong>{player.total}</strong></td>
                   <td>{player.count}</td>
                   <td>{player.avg}</td>
-                  <td>{player.gwPercent || '-'}</td>
                   <td>{player.omwPercent || '-'}</td>
+                  <td>{player.gwPercent || '-'}</td>
                 </tr>
               ))
             ) : (
