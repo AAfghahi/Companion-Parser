@@ -407,7 +407,8 @@ def parse_standings_debug(ocr_text: str) -> tuple[List[Dict], dict]:  # type: ig
 
         records = re.findall(record_pattern, line)
         if not records:
-            orphaned_names.append((rank, line_without_rank))
+            # Store just the name text, ignore the rank (we'll match by position instead)
+            orphaned_names.append(line_without_rank)
             continue
 
         record = records[0]
