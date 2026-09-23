@@ -47,8 +47,9 @@ def parse_standings_multicolumn(text: str, debug: bool = False) -> List[Dict[str
         if not line:
             continue
 
-        # Check for standard format: starts with rank, has name and record on same line
-        if re.match(r'^\d+\s+\w', line) and re.search(record_pattern, line):
+        # Check for standard format: starts with rank, has name (alphabetic) and record on same line
+        # Use [a-zA-Z] to match only names, not fragments like "9 3-0-0" (point+record)
+        if re.match(r'^\d+\s+[a-zA-Z]', line) and re.search(record_pattern, line):
             # Parse as complete entry
             parts = line.split()
             rank_str = parts[0].rstrip('.')
