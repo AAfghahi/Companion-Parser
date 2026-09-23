@@ -269,8 +269,11 @@ def filter_opt_out_players(standings: List[Dict[str, any]]) -> List[Dict[str, an
 
 def merge_standings(*files_list) -> List[Dict[str, any]]:
     """
-    Merge standings from multiple sources, removing duplicates by name.
-    Entry with the best record (highest points) is kept.
+    Merge standings from multiple sources, combining data from the same player.
+    When a player appears in multiple screenshots:
+    - Uses the highest points value
+    - Fills in missing percentages from other entries
+    - Prioritizes non-None values
     """
     seen_names = {}
 
@@ -278,9 +281,26 @@ def merge_standings(*files_list) -> List[Dict[str, any]]:
         if isinstance(file_data, list):
             for entry in file_data:
                 name = entry['name'].lower()
-                # Keep the entry with the higher points
-                if name not in seen_names or entry['points'] > seen_names[name]['points']:
-                    seen_names[name] = entry
+
+                if name not in seen_names:
+                    # First time seeing this player
+                    seen_names[name] = entry.copy()
+                else:
+                    # Player already exists - merge the data
+                    existing = seen_names[name]
+
+                    # Keep higher points
+                    if entry['points'] > existing['points']:
+                        existing['points'] = entry['points']
+                        existing['record'] = entry['record']
+
+                    # Fill in missing OMW% if this entry has it
+                    if entry.get('omw') is not None and existing.get('omw') is None:
+                        existing['omw'] = entry['omw']
+
+                    # Fill in missing GW% if this entry has it
+                    if entry.get('gw') is not None and existing.get('gw') is None:
+                        existing['gw'] = entry['gw']
 
     return list(seen_names.values())
 
@@ -391,6 +411,8 @@ Examples:
   python screenshot_to_csv.py screenshot.png -d 9/14/26 -s "Store Name"
   python screenshot_to_csv.py img1.png img2.png --json standings.json
   python screenshot_to_csv.py screenshot.png -o custom_name.xlsx
+  # Merge multiple screenshots (e.g., one with OMW%, another with GW%)
+  python screenshot_to_csv.py standings_omw.png standings_gw.png
         '''
     )
 
