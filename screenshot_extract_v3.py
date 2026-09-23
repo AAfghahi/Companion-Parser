@@ -2,9 +2,9 @@
 """
 Magic: The Gathering Tournament Standings Extractor v3
 
-Handles both table-based and column-based OCR formats.
-- Table format: Rank NAME Points W-L-D OMW% GW%
-- Column format: NAME section, POINTS section, OMW% section
+Robust parser handling scrambled table OCR layouts where columns are interleaved.
+- Table format: Can handle OCR text with rows/columns in mixed order
+- Column format: Separate NAME, POINTS, OMW% sections
 """
 
 import argparse
@@ -67,61 +67,84 @@ def calculate_points(record: str) -> int:
 
 
 def parse_standings_table_format(lines: List[str], record_pattern: str) -> Optional[List[Dict]]:
-    """Try to parse table-based format (Rank NAME Points W-L-D OMW% GW%)."""
-    standings = []
+    """Parse scrambled table format by extracting all data pieces separately."""
 
     header_idx = -1
     for i, line in enumerate(lines):
-        if 'Rank' in line and 'NAME' in line:
+        if 'RANK' in line.upper() and 'NAME' in line.upper():
             header_idx = i
             break
 
     if header_idx == -1:
         return None
 
+    # Extract all data pieces separately
+    ranks = []
+    names = []
+    records = []
+    percentages = []
+
     for line in lines[header_idx + 1:]:
         line_upper = line.upper()
 
-        if any(kw in line_upper for kw in ['STANDINGS', 'MATCH', 'ROUND', 'ASOF', 'POINTS W-L-D']):
+        # Skip metadata lines
+        if any(kw in line_upper for kw in ['STANDINGS', 'MATCH', 'ROUND', 'ASOF']):
             continue
-        if line.startswith(('«', '>', '<', '◆', '♦', '●', '◉', '»', '~')):
+        if line.startswith(('«', '>', '<', '◆', '♦', '●', '◉', '»', '~', ')')):
             continue
-        if not line or len(line.strip()) < 3:
-            continue
-
-        rank_match = re.match(r'^(\d+)[.\s]', line)
-        if not rank_match:
+        if not line or len(line.strip()) < 2:
             continue
 
-        rank = int(rank_match.group(1))
-        remainder = line[rank_match.end():].strip()
+        # Extract ranks (1-2 digits at start)
+        rank_match = re.match(r'^(\d{1,2})[.\s]', line)
+        if rank_match:
+            ranks.append(int(rank_match.group(1)))
 
-        if not remainder:
-            continue
+        # Extract records (W-L or W-L-D format)
+        found_record = re.search(record_pattern, line)
+        if found_record:
+            records.append(found_record.group(0))
 
-        record_match = re.search(record_pattern, remainder)
-        if not record_match:
-            continue
+        # Extract percentages
+        percents = re.findall(r'(\d+(?:\.\d+)?)\s*%', line)
+        for p in percents:
+            percentages.append(float(p))
 
-        record = record_match.group(0)
-        before_record = remainder[:record_match.start()].strip()
-        after_record = remainder[record_match.end():].strip()
+        # Extract names (lines with letters that aren't just metadata)
+        if not re.search(record_pattern, line) and not re.search(r'\d+\s*%', line):
+            name_candidate = line.strip()
 
-        points_match = re.search(r'\s(\d+)\s*$', before_record)
-        if points_match:
-            name = before_record[:points_match.start()].strip()
-            points = int(points_match.group(1))
-        else:
-            name = before_record
+            # Skip if mostly numbers or special chars
+            if name_candidate and any(c.isalpha() for c in name_candidate):
+                # Remove leading rank number
+                name_candidate = re.sub(r'^\d+[.\s]*', '', name_candidate).strip()
+                # Remove trailing special chars and numbers
+                name_candidate = re.sub(r'[)\]"\'~].*$', '', name_candidate).strip()
+
+                if name_candidate and len(name_candidate) > 1:
+                    cleaned = clean_name(name_candidate)
+                    if cleaned and len(cleaned) > 1:
+                        names.append(cleaned)
+
+    # Match data by index
+    num_entries = max(len(ranks), len(records))
+    if num_entries == 0:
+        return None
+
+    standings = []
+    for idx in range(num_entries):
+        rank = ranks[idx] if idx < len(ranks) else idx + 1
+        name = names[idx] if idx < len(names) else f"Unknown_{idx+1}"
+
+        if idx < len(records):
+            record = records[idx]
             points = calculate_points(record)
+        else:
+            continue
 
-        name = clean_name(name)
-        if not name:
-            name = f"Unknown_{rank}"
-
-        percents = re.findall(r'(\d+(?:\.\d+)?)\s*%', after_record)
-        omw = float(percents[0]) if len(percents) > 0 else None
-        gw = float(percents[1]) if len(percents) > 1 else None
+        omw = None
+        if idx < len(percentages):
+            omw = percentages[idx]
 
         standings.append({
             'rank': rank,
@@ -129,7 +152,7 @@ def parse_standings_table_format(lines: List[str], record_pattern: str) -> Optio
             'record': record,
             'points': points,
             'omw': omw,
-            'gw': gw
+            'gw': None
         })
 
     return standings if standings else None
