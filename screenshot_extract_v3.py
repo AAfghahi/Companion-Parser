@@ -114,6 +114,26 @@ def clean_name(name: str) -> str:
     return cleaned.strip()
 
 
+def normalize_names(standings: List[Dict]) -> List[Dict]:
+    """Normalize all names by fuzzy-matching against KNOWN_PLAYERS."""
+    known_players_lower = {p.lower(): p for p in KNOWN_PLAYERS}
+
+    for entry in standings:
+        name = entry['name']
+        name_lower = name.lower().strip()
+
+        # First try exact match (case-insensitive)
+        if name_lower in known_players_lower:
+            entry['name'] = known_players_lower[name_lower]
+        else:
+            # Try fuzzy match with high cutoff for normalization
+            matches = get_close_matches(name, KNOWN_PLAYERS, n=1, cutoff=0.7)
+            if matches:
+                entry['name'] = matches[0]
+
+    return standings
+
+
 def recover_unknowns(standings: List[Dict], all_extracted_names: List[str]) -> List[Dict]:
     """Recover Unknown entries and truncated names by fuzzy matching against known players."""
     known_players_lower = {p.lower(): p for p in KNOWN_PLAYERS}
@@ -827,6 +847,9 @@ Examples:
                 print(f"    {entry}")
         else:
             standings = parse_standings(ocr_text)
+
+        # Normalize names before merging
+        standings = normalize_names(standings)
 
         all_standings.append(standings)
 
