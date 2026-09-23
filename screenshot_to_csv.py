@@ -130,7 +130,10 @@ def parse_standings(text: str, debug: bool = False) -> List[Dict[str, any]]:
         merged_lines.append(merged_text)
 
     standings = []
+    orphaned_records = []  # Records without rank/name
+    orphaned_entries = []  # Partial entries to fill in later
 
+    # First pass: extract all data and parse complete entries
     for line_num, line in enumerate(merged_lines, 1):
         line = line.strip()
         if not line:
@@ -142,7 +145,7 @@ def parse_standings(text: str, debug: bool = False) -> List[Dict[str, any]]:
 
         parts = line.split()
 
-        if len(parts) < 3:
+        if len(parts) < 2:
             if debug:
                 print(f"Debug: Line {line_num} has too few parts ({len(parts)}): {line[:60]}")
             continue
@@ -165,74 +168,114 @@ def parse_standings(text: str, debug: bool = False) -> List[Dict[str, any]]:
                     record_idx = i
                     break
 
-            if not record:
-                if debug:
-                    print(f"Debug: Line {line_num} - No W-L-D record found: {line[:60]}")
-                continue
+            # Case 1: Line has record - try to extract full entry
+            if record:
+                # Extract points (should be right before the record)
+                points = None
+                points_idx = record_idx - 1
 
-            # Extract points (should be right before the record)
-            points = None
-            points_idx = record_idx - 1
-
-            if points_idx >= idx:
-                points_str = parts[points_idx]
-                if points_str.isdigit():
-                    points = int(points_str)
-                    # Name is everything between rank and points
-                    name_parts = parts[idx:points_idx]
+                if points_idx >= idx:
+                    points_str = parts[points_idx]
+                    if points_str.isdigit():
+                        points = int(points_str)
+                        name_parts = parts[idx:points_idx]
+                    else:
+                        name_parts = parts[idx:record_idx]
                 else:
-                    # No explicit points, name includes what we thought was points
                     name_parts = parts[idx:record_idx]
+
+                name = ' '.join(name_parts).strip() if name_parts else ""
+                name = clean_name(name) if name else ""
+
+                if points is None:
+                    points = calculate_points(record)
+
+                # Extract percentages
+                omw = None
+                gw = None
+                percentages = []
+
+                for i in range(record_idx + 1, len(parts)):
+                    percent_match = re.search(r'(\d+(?:\.\d+)?)\s*%', parts[i])
+                    if percent_match:
+                        value = float(percent_match.group(1))
+                        if 0 <= value <= 100:
+                            percentages.append(value)
+
+                if len(percentages) >= 1:
+                    omw = percentages[0]
+                if len(percentages) >= 2:
+                    gw = percentages[1]
+
+                # If we have name and record, add as complete entry
+                if name and record:
+                    entry = {
+                        'name': name.strip(),
+                        'record': record,
+                        'points': points,
+                        'omw': omw,
+                        'gw': gw,
+                        'rank': rank
+                    }
+                    standings.append(entry)
+                    if debug:
+                        print(f"Debug: Line {line_num} ✓ Parsed: {name.strip()}, Points={points}, OMW%={omw}, GW%={gw}")
+                # If no name but has rank+record, save for later
+                elif rank and record:
+                    orphaned_entries.append({
+                        'rank': rank,
+                        'record': record,
+                        'points': points,
+                        'omw': omw,
+                        'gw': gw
+                    })
+                    if debug:
+                        print(f"Debug: Line {line_num} - Orphaned entry (rank but no name): rank={rank}, record={record}")
+                # If just record+percentages (no name, no rank), save for later
+                else:
+                    orphaned_records.append({
+                        'record': record,
+                        'points': points,
+                        'omw': omw,
+                        'gw': gw
+                    })
+                    if debug:
+                        print(f"Debug: Line {line_num} - Orphaned record: {record}, points={points}")
+
+            # Case 2: Line has no record (orphaned name or rank)
             else:
-                name_parts = parts[idx:record_idx]
-
-            name = ' '.join(name_parts)
-            # Clean the name to remove emojis and non-alphabetic characters
-            name = clean_name(name)
-
-            # If no explicit points found, calculate from record
-            if points is None:
-                points = calculate_points(record)
-
-            # Extract OMW% and GW% if present
-            # Look for all percentages after the record
-            omw = None
-            gw = None
-            percentages = []
-
-            # Collect all percentage values after the record position
-            for i in range(record_idx + 1, len(parts)):
-                percent_match = re.search(r'(\d+(?:\.\d+)?)\s*%', parts[i])
-                if percent_match:
-                    # Ensure value is between 0 and 100
-                    value = float(percent_match.group(1))
-                    if 0 <= value <= 100:
-                        percentages.append(value)
-
-            # Assign first two percentages found to OMW% and GW%
-            if len(percentages) >= 1:
-                omw = percentages[0]
-            if len(percentages) >= 2:
-                gw = percentages[1]
-
-            if name and record:
-                entry = {
-                    'name': name.strip(),
-                    'record': record,
-                    'points': points,
-                    'omw': omw,
-                    'gw': gw
-                }
-                standings.append(entry)
-                if debug:
-                    print(f"Debug: Line {line_num} ✓ Parsed: {name.strip()}, Points={points}, OMW%={omw}, GW%={gw}")
+                # Check if it's just a name or rank number
+                if rank:
+                    orphaned_entries.append({'rank': rank, 'line_text': ' '.join(parts[idx:])})
+                    if debug:
+                        print(f"Debug: Line {line_num} - Orphaned rank: {rank}, text={' '.join(parts[idx:])[:40]}")
+                elif any(not p.replace('%', '').replace('.', '').isdigit() for p in parts):
+                    # Likely a name
+                    if debug:
+                        print(f"Debug: Line {line_num} - Orphaned name: {line[:60]}")
 
         except Exception as e:
-            # Skip lines that don't parse
             if debug:
-                print(f"Debug: Skipped line: {line}")
-                print(f"  Error: {e}")
+                print(f"Debug: Exception on line {line_num}: {e}")
             continue
+
+    # Second pass: match orphaned records with orphaned ranks/names
+    for entry in orphaned_entries:
+        if 'line_text' in entry and orphaned_records:
+            # Extract name from line_text
+            name = clean_name(entry['line_text'])
+            if name and orphaned_records:
+                record_data = orphaned_records.pop(0)
+                final_entry = {
+                    'name': name,
+                    'record': record_data['record'],
+                    'points': record_data['points'],
+                    'omw': record_data['omw'],
+                    'gw': record_data['gw']
+                }
+                standings.append(final_entry)
+                if debug:
+                    print(f"Debug: Reconstructed entry: {name}, record={record_data['record']}")
 
     return standings
 
