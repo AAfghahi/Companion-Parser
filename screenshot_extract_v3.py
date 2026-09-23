@@ -3,6 +3,7 @@
 Magic: The Gathering Tournament Standings Extractor v3
 
 Robust parser handling scrambled table OCR layouts where columns are interleaved.
+- Supports multiple screenshots with deduplication and data merging
 - Table format: Can handle OCR text with rows/columns in mixed order
 - Column format: Separate NAME, POINTS, OMW% sections
 """
@@ -127,7 +128,7 @@ def parse_standings_table_format(lines: List[str], record_pattern: str) -> Optio
                         names.append(cleaned)
 
     # Match data by index
-    num_entries = max(len(ranks), len(records))
+    num_entries = max(len(names), len(records))
     if num_entries == 0:
         return None
 
@@ -275,6 +276,41 @@ def parse_standings(ocr_text: str) -> List[Dict]:
     return []
 
 
+def merge_standings(all_standings: List[List[Dict]]) -> List[Dict]:
+    """
+    Merge standings from multiple screenshots, deduplicating by player name.
+    Later entries (from different screenshots) update earlier ones with missing data.
+    Sorts by points (descending) and reassigns ranks.
+    """
+    merged = {}
+
+    for standings in all_standings:
+        for entry in standings:
+            name = entry['name'].lower().strip()
+
+            if name not in merged:
+                merged[name] = entry.copy()
+            else:
+                # Update with missing data from new screenshot
+                if merged[name]['omw'] is None and entry['omw'] is not None:
+                    merged[name]['omw'] = entry['omw']
+                if merged[name]['gw'] is None and entry['gw'] is not None:
+                    merged[name]['gw'] = entry['gw']
+                if merged[name]['points'] == 0 and entry['points'] > 0:
+                    merged[name]['points'] = entry['points']
+                if not merged[name]['record'] or merged[name]['record'] == '0-0-0':
+                    merged[name]['record'] = entry['record']
+
+    # Sort by points (descending), then by name
+    result = sorted(merged.values(), key=lambda x: (-x['points'], x['name']))
+
+    # Reassign ranks after sorting
+    for idx, entry in enumerate(result, 1):
+        entry['rank'] = idx
+
+    return result
+
+
 def write_excel(standings: List[Dict], output_path: str):
     """Write standings to Excel file."""
     if not standings:
@@ -314,35 +350,53 @@ def write_excel(standings: List[Dict], output_path: str):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Extract MTG standings from screenshots')
-    parser.add_argument('image', help='Screenshot image file')
+    parser = argparse.ArgumentParser(description='Extract MTG standings from screenshots (supports multiple files)')
+    parser.add_argument('images', nargs='+', help='Screenshot image file(s)')
     parser.add_argument('-o', '--output', help='Output Excel file')
     parser.add_argument('--debug', action='store_true', help='Show debug output')
 
     args = parser.parse_args()
 
-    if not os.path.exists(args.image):
-        print(f"Error: File not found: {args.image}")
-        sys.exit(1)
+    all_standings = []
 
-    print(f"Processing: {args.image}")
+    for image_path in args.images:
+        if not os.path.exists(image_path):
+            print(f"Error: File not found: {image_path}")
+            sys.exit(1)
 
-    ocr_text = extract_ocr_text(args.image)
+        print(f"Processing: {image_path}")
+
+        ocr_text = extract_ocr_text(image_path)
+
+        if args.debug:
+            print(f"\n=== Raw OCR Output ({image_path}) ===")
+            print(ocr_text)
+            print("======================\n")
+
+        standings = parse_standings(ocr_text)
+
+        if args.debug:
+            print(f"Debug: Extracted {len(standings)} entries from {image_path}")
+            for entry in standings[:3]:
+                print(f"  {entry}")
+
+        all_standings.append(standings)
+
+    # Merge all standings and deduplicate
+    merged_standings = merge_standings(all_standings)
 
     if args.debug:
-        print("\n=== Raw OCR Output ===")
-        print(ocr_text)
-        print("======================\n")
+        print(f"\nDebug: After merge and dedup: {len(merged_standings)} unique entries")
 
-    standings = parse_standings(ocr_text)
+    # Determine output filename
+    if args.output:
+        output_file = args.output
+    elif len(args.images) == 1:
+        output_file = "standings_extract_v3.xlsx"
+    else:
+        output_file = "standings_merged.xlsx"
 
-    if args.debug:
-        print(f"Debug: Extracted {len(standings)} entries")
-        for entry in standings[:5]:
-            print(f"  {entry}")
-
-    output_file = args.output or "standings_extract_v3.xlsx"
-    write_excel(standings, output_file)
+    write_excel(merged_standings, output_file)
 
 
 if __name__ == '__main__':
