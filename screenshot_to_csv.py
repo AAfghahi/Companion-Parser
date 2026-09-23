@@ -379,9 +379,10 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='''
 Examples:
-  python screenshot_to_csv.py screenshot.png -o standings.xlsx
-  python screenshot_to_csv.py screenshot.png -d 9/14/26 -o week.xlsx -s "Store Name"
-  python screenshot_to_csv.py img1.png img2.png -o merged.xlsx --json standings.json
+  python screenshot_to_csv.py screenshot.png
+  python screenshot_to_csv.py screenshot.png -d 9/14/26 -s "Store Name"
+  python screenshot_to_csv.py img1.png img2.png --json standings.json
+  python screenshot_to_csv.py screenshot.png -o custom_name.xlsx
         '''
     )
 
@@ -393,8 +394,7 @@ Examples:
 
     parser.add_argument(
         '-o', '--output',
-        help='Output Excel file path (default: standings.xlsx)',
-        default='standings.xlsx'
+        help='Output Excel file path (default: standings_[date].xlsx)'
     )
 
     parser.add_argument(
@@ -420,11 +420,20 @@ Examples:
 
     args = parser.parse_args()
 
+    # Determine week start date (needed for default filename)
+    week_start = args.date if args.date else get_week_start_date()
+
+    # Generate default output filename with date if not provided
+    if not args.output:
+        # Format date for filename (replace slashes with underscores)
+        date_str = week_start.replace('/', '_')
+        args.output = f'standings_{date_str}.xlsx'
+
     all_standings = []
 
     # Process each image
     for image_path in args.images:
-        standings = process_screenshot(image_path, week_start=args.date)
+        standings = process_screenshot(image_path, week_start=week_start)
         all_standings.extend(standings)
 
     # Merge and remove duplicates
