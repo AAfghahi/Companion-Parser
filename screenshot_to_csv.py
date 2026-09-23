@@ -479,25 +479,25 @@ def parse_standings(text: str, debug: bool = False) -> List[Dict[str, any]]:
             if debug:
                 print(f"Debug: Reconstructed rank {entry.get('rank')}: record={record_data['record']}")
 
-    # Handle remaining orphaned records (entries without rank numbers - entries 5-6 from colored rows)
-    # Try to match orphaned names with orphaned points first
-    while orphaned_names and orphaned_points and orphaned_records:
+    # Handle remaining orphaned records (entries without rank numbers - colored rows)
+    # Priority 1: Match orphaned names with orphaned records (even without points)
+    while orphaned_names and orphaned_records:
         name = orphaned_names.pop(0)
-        points = orphaned_points.pop(0)
         record_data = orphaned_records.pop(0)
+        points = orphaned_points.pop(0) if orphaned_points else None
 
         final_entry = {
             'name': name,
             'record': record_data['record'],
-            'points': points,  # Use the orphaned points value
+            'points': points,
             'omw': record_data['omw'],
             'gw': record_data['gw']
         }
         standings.append(final_entry)
         if debug:
-            print(f"Debug: Reconstructed orphaned entry: {name}, points={points}, record={record_data['record']}")
+            print(f"Debug: Reconstructed orphaned entry: {name}, record={record_data['record']}, omw={record_data['omw']}")
 
-    # Any remaining orphaned records are completely lost colored row entries (no name found)
+    # Priority 2: Any remaining orphaned records are completely lost colored row entries (no name found)
     for record_data in orphaned_records:
         final_entry = {
             'name': f"[Colored Row - Name Lost]",
