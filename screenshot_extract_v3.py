@@ -181,9 +181,8 @@ def parse_standings_table_format(lines: List[str], record_pattern: str) -> Optio
 
     standings = []
     orphaned_records = []  # Records without associated names (from colored rows)
-    orphaned_names = []    # Names without associated records (from colored rows)
+    orphaned_names = []    # Names without associated records (from colored rows) - just the names
     standalone_names = []  # Names with no rank or record (separate line)
-    standalone_ranks = []  # Rank numbers with no name or record (separate line)
     last_complete_rank = 0
 
     for line in lines[header_idx + 1:]:
@@ -254,8 +253,8 @@ def parse_standings_table_format(lines: List[str], record_pattern: str) -> Optio
         # Extract all records from the line
         records = re.findall(record_pattern, line)
         if not records:
-            # No record: might be orphaned name
-            orphaned_names.append((rank, line_without_rank))
+            # No record: might be orphaned name (ignore rank, just collect name)
+            orphaned_names.append(line_without_rank)
             continue
 
         record = records[0]
@@ -290,70 +289,44 @@ def parse_standings_table_format(lines: List[str], record_pattern: str) -> Optio
                     'gw': gw
                 })
 
-    # Recover standalone names paired with standalone ranks
-    if standalone_names and standalone_ranks:
-        num_standalone_pairs = min(len(standalone_names), len(standalone_ranks))
-        for i in range(num_standalone_pairs):
-            rank = standalone_ranks[i]
-            name = standalone_names[i]
+    # Combine all names (standalone + orphaned) and match with records by position
+    all_names = standalone_names + orphaned_names
 
-            # Try to find a matching record for this rank
-            # Look through orphaned_records for a match
-            matching_record = None
-            matching_idx = None
-            for j, (record, _) in enumerate(orphaned_records):
-                # Assume records are in order, so match by position
-                if j == i:
-                    matching_record = record
-                    matching_idx = j
-                    break
+    # Clean all names
+    cleaned_names = []
+    for name_text in all_names:
+        name = clean_name(name_text)
+        if name and len(name) > 1:
+            cleaned_names.append(name)
 
-            if matching_record:
-                points = calculate_points(matching_record)
-                standings.append({
-                    'rank': rank,
-                    'name': name,
-                    'record': matching_record,
-                    'points': points,
-                    'omw': None,
-                    'gw': None
-                })
-                if matching_idx is not None:
-                    orphaned_records.pop(matching_idx)
+    # Match names with records by position (1-to-1)
+    num_pairs = min(len(cleaned_names), len(orphaned_records))
+    for i in range(num_pairs):
+        name = cleaned_names[i]
+        record, _ = orphaned_records[i]
+        points = calculate_points(record)
+        standings.append({
+            'rank': i + 1,  # Rank will be recalculated after sorting
+            'name': name,
+            'record': record,
+            'points': points,
+            'omw': None,
+            'gw': None
+        })
 
-    # Recover orphaned data: match orphaned names with orphaned records
-    # Handle both matched pairs and unmatched records/names
-    if orphaned_names or orphaned_records:
-        # First, pair up orphaned names with orphaned records (1-to-1)
-        num_pairs = min(len(orphaned_names), len(orphaned_records))
-        for i in range(num_pairs):
-            rank, name_text = orphaned_names[i]
+    # Handle unmatched records (more records than names)
+    if len(orphaned_records) > num_pairs:
+        for i in range(num_pairs, len(orphaned_records)):
             record, _ = orphaned_records[i]
-            name = clean_name(name_text)
-            if name and len(name) > 1:
-                points = calculate_points(record)
-                standings.append({
-                    'rank': rank,
-                    'name': name,
-                    'record': record,
-                    'points': points,
-                    'omw': None,
-                    'gw': None
-                })
-
-        # Handle unmatched records (more records than names)
-        if len(orphaned_records) > num_pairs:
-            for i in range(num_pairs, len(orphaned_records)):
-                record, _ = orphaned_records[i]
-                # Use a placeholder name - will be recovered by fuzzy matching later
-                standings.append({
-                    'rank': last_complete_rank + i - num_pairs + 1,
-                    'name': f'Unknown_{i+1}',
-                    'record': record,
-                    'points': calculate_points(record),
-                    'omw': None,
-                    'gw': None
-                })
+            # Use a placeholder name - will be recovered by fuzzy matching later
+            standings.append({
+                'rank': i + 1,
+                'name': f'Unknown_{i+1}',
+                'record': record,
+                'points': calculate_points(record),
+                'omw': None,
+                'gw': None
+            })
 
     return standings if standings else None
 
