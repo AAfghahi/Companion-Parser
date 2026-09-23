@@ -264,7 +264,11 @@ def parse_standings(text: str, debug: bool = False) -> List[Dict[str, any]]:
         line = line.encode('ascii', 'ignore').decode('ascii')
         if not line:
             continue
-        if line.upper().startswith('RANK') or line.upper().startswith('MATCH'):
+        # Skip header lines - they contain multiple header keywords
+        line_upper = line.upper()
+        header_keywords = ['RANK', 'MATCH', 'STANDINGS', 'NAME', 'POINTS', 'ASOF']
+        header_count = sum(1 for kw in header_keywords if kw in line_upper)
+        if header_count >= 2 or line_upper.startswith(('RANK', 'MATCH')):
             if debug:
                 print(f"Debug: Skipped header line {line_num}: {line[:60]}")
             continue
