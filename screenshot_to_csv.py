@@ -76,7 +76,7 @@ def extract_text_from_image(image_path: str) -> str:
         return ""
 
 
-def parse_standings(text: str) -> List[Dict[str, any]]:
+def parse_standings(text: str, debug: bool = False) -> List[Dict[str, any]]:
     """
     Parse Magic: The Gathering tournament standings text from OCR.
 
@@ -144,21 +144,26 @@ def parse_standings(text: str) -> List[Dict[str, any]]:
             if points is None:
                 points = calculate_points(record)
 
-            # Extract OMW% if present (looks for percentage after record)
+            # Extract OMW% and GW% if present
+            # Look for all percentages after the record
             omw = None
             gw = None
-            if record_idx + 1 < len(parts):
-                potential_omw = parts[record_idx + 1]
-                omw_match = re.search(r'(\d+(?:\.\d+)?)\s*%', potential_omw)
-                if omw_match:
-                    omw = float(omw_match.group(1))
+            percentages = []
 
-            # Extract GW% if present (looks for percentage after OMW%)
-            if record_idx + 2 < len(parts):
-                potential_gw = parts[record_idx + 2]
-                gw_match = re.search(r'(\d+(?:\.\d+)?)\s*%', potential_gw)
-                if gw_match:
-                    gw = float(gw_match.group(1))
+            # Collect all percentage values after the record position
+            for i in range(record_idx + 1, len(parts)):
+                percent_match = re.search(r'(\d+(?:\.\d+)?)\s*%', parts[i])
+                if percent_match:
+                    # Ensure value is between 0 and 100
+                    value = float(percent_match.group(1))
+                    if 0 <= value <= 100:
+                        percentages.append(value)
+
+            # Assign first two percentages found to OMW% and GW%
+            if len(percentages) >= 1:
+                omw = percentages[0]
+            if len(percentages) >= 2:
+                gw = percentages[1]
 
             if name and record:
                 standings.append({
@@ -171,12 +176,15 @@ def parse_standings(text: str) -> List[Dict[str, any]]:
 
         except Exception as e:
             # Skip lines that don't parse
+            if debug:
+                print(f"Debug: Skipped line: {line}")
+                print(f"  Error: {e}")
             continue
 
     return standings
 
 
-def process_screenshot(image_path: str, week_start: Optional[str] = None) -> List[Dict[str, any]]:
+def process_screenshot(image_path: str, week_start: Optional[str] = None, debug: bool = False) -> List[Dict[str, any]]:
     """
     Process a single screenshot and return standings data.
     """
@@ -186,7 +194,7 @@ def process_screenshot(image_path: str, week_start: Optional[str] = None) -> Lis
 
     print(f"Processing: {image_path}")
     text = extract_text_from_image(image_path)
-    standings = parse_standings(text)
+    standings = parse_standings(text, debug=debug)
 
     if week_start is None:
         week_start = get_week_start_date()
@@ -418,6 +426,12 @@ Examples:
         help='Exclude OMW%% column from output (default: included)'
     )
 
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        help='Enable debug output to see OCR parsing details'
+    )
+
     args = parser.parse_args()
 
     # Determine week start date (needed for default filename)
@@ -433,7 +447,7 @@ Examples:
 
     # Process each image
     for image_path in args.images:
-        standings = process_screenshot(image_path, week_start=week_start)
+        standings = process_screenshot(image_path, week_start=week_start, debug=args.debug)
         all_standings.extend(standings)
 
     # Merge and remove duplicates
