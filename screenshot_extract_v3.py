@@ -353,10 +353,12 @@ def write_excel(standings: List[Dict], output_path: str):
     # Check if week field exists in any entry
     has_week = any('week' in entry for entry in standings)
 
-    headers = ['Rank', 'Name', 'Record', 'Points']
+    # Column order: Name, Record, Week (if present), Points, OMW%
+    headers = ['Name', 'Record']
     if has_week:
         headers.append('Week')
-    headers.extend(['OMW%', 'GW%'])
+    headers.append('Points')
+    headers.append('OMW%')
 
     for col, header in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col)
@@ -367,32 +369,27 @@ def write_excel(standings: List[Dict], output_path: str):
 
     for row_idx, entry in enumerate(standings, 2):
         col_idx = 1
-        ws.cell(row=row_idx, column=col_idx).value = entry.get('rank')
-        col_idx += 1
         ws.cell(row=row_idx, column=col_idx).value = entry.get('name', '')
         col_idx += 1
         ws.cell(row=row_idx, column=col_idx).value = entry.get('record', '')
         col_idx += 1
-        ws.cell(row=row_idx, column=col_idx).value = entry.get('points', 0)
-        col_idx += 1
         if has_week:
             ws.cell(row=row_idx, column=col_idx).value = entry.get('week', '')
             col_idx += 1
-        ws.cell(row=row_idx, column=col_idx).value = entry.get('omw', '')
+        ws.cell(row=row_idx, column=col_idx).value = entry.get('points', 0)
         col_idx += 1
-        ws.cell(row=row_idx, column=col_idx).value = entry.get('gw', '')
+        ws.cell(row=row_idx, column=col_idx).value = entry.get('omw', '')
 
-    ws.column_dimensions['A'].width = 8
-    ws.column_dimensions['B'].width = 20
-    ws.column_dimensions['C'].width = 12
-    ws.column_dimensions['D'].width = 10
+    # Auto-adjust column widths
+    ws.column_dimensions['A'].width = 20  # Name
+    ws.column_dimensions['B'].width = 12  # Record
     if has_week:
-        ws.column_dimensions['E'].width = 12
-        ws.column_dimensions['F'].width = 10
-        ws.column_dimensions['G'].width = 10
+        ws.column_dimensions['C'].width = 12  # Week
+        ws.column_dimensions['D'].width = 10  # Points
+        ws.column_dimensions['E'].width = 10  # OMW%
     else:
-        ws.column_dimensions['E'].width = 10
-        ws.column_dimensions['F'].width = 10
+        ws.column_dimensions['C'].width = 10  # Points
+        ws.column_dimensions['D'].width = 10  # OMW%
 
     wb.save(output_path)
     print(f"✓ Excel written: {output_path}")
