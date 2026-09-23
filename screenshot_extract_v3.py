@@ -133,7 +133,8 @@ def parse_standings_table_format(lines: List[str], record_pattern: str) -> Optio
 
     standings = []
     for idx in range(num_entries):
-        rank = ranks[idx] if idx < len(ranks) else idx + 1
+        # Assign ranks sequentially (scrambled OCR ranks aren't reliable)
+        rank = idx + 1
         name = names[idx] if idx < len(names) else f"Unknown_{idx+1}"
 
         if idx < len(records):
