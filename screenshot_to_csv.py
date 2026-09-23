@@ -32,35 +32,106 @@ OPT_OUT_PLAYERS: List[str] = []
 
 def parse_standings_multicolumn(text: str, debug: bool = False) -> List[Dict[str, any]]:
     """
-    Parse standings from multi-column table format where names and records are in separate columns.
-    Names come first, then records/points/percentages follow.
+    Parse standings from mixed/multi-column table format.
+    Handles both complete entries (rank+name+record+percentage on one line)
+    and fragmented entries (names/records/percentages in separate columns/lines).
     """
     lines = text.strip().split('\n')
+    standings = []
+    record_pattern = r'\d{1,2}-\d{1,2}(?:-\d{1,2})?'
 
-    # Extract all player names, records, and percentages separately
+    # First pass: extract complete standard format entries (rank+name+record on one line)
+    fragmented_lines = []
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+
+        # Check for standard format: starts with rank, has name and record on same line
+        if re.match(r'^\d+\s+\w', line) and re.search(record_pattern, line):
+            # Parse as complete entry
+            parts = line.split()
+            rank_str = parts[0].rstrip('.')
+            rank = int(rank_str) if rank_str.isdigit() else None
+
+            # Find record
+            record = None
+            record_idx = -1
+            for i, part in enumerate(parts[1:], 1):
+                if re.search(record_pattern, part):
+                    record = part.rstrip('.')
+                    record_idx = i
+                    break
+
+            if record:
+                # Extract name (between rank and record)
+                name_parts = parts[1:record_idx]
+                # Check if last part before record is points (digit only)
+                if name_parts and name_parts[-1].isdigit():
+                    points = int(name_parts[-1])
+                    name = ' '.join(name_parts[:-1])
+                else:
+                    points = calculate_points(record)
+                    name = ' '.join(name_parts)
+
+                name = clean_name(name) if name else ""
+
+                # Extract percentages after record
+                omw = None
+                gw = None
+                percentages = []
+                for i in range(record_idx + 1, len(parts)):
+                    percent_match = re.search(r'(\d+(?:\.\d+)?)\s*%', parts[i])
+                    if percent_match:
+                        value = float(percent_match.group(1))
+                        if 0 <= value <= 100:
+                            percentages.append(value)
+
+                if len(percentages) >= 1:
+                    omw = percentages[0]
+                if len(percentages) >= 2:
+                    gw = percentages[1]
+
+                entry = {
+                    'name': name,
+                    'record': record,
+                    'points': points,
+                    'omw': omw,
+                    'gw': gw,
+                    'rank': rank
+                }
+                standings.append(entry)
+
+                if debug:
+                    print(f"Debug: Standard format entry: {name}, {record}, Points={points}, OMW%={omw}, GW%={gw}")
+            continue
+
+        # Not standard format, keep for fragmented parsing
+        fragmented_lines.append(line)
+
+    # Second pass: extract fragmented entries (separate columns)
     names = []
     records_data = []
     percentages_data = []
 
-    for line in lines:
-        line = line.strip()
+    for line in fragmented_lines:
         if not line or len(line) < 2:
             continue
 
         # Skip header lines and section headers
         if any(kw in line.upper() for kw in ['RANK', 'MATCH', 'STANDINGS', 'PLAYER', 'ASOF', 'AS OF', 'W-L-D', 'GW%']):
             continue
-        # Skip "NAME" and "OMW%" headers, but track them
+        # Skip "NAME" and "OMW%" headers
         if line.upper() in ['NAME', 'POINTS', 'OMW%', 'POINTS W-L-D']:
             continue
 
         # Check if this line has percentages (OMW% or GW%)
-        if '%' in line and not re.search(r'\d{1,2}-\d{1,2}', line):
+        if '%' in line and not re.search(record_pattern, line):
             # Extract all percentages from this line
             percent_matches = re.findall(r'(\d+(?:\.\d+)?)\s*%', line)
             percentages_data.extend([float(p) for p in percent_matches])
         # Check if this line has a record (W-L-D pattern)
-        elif re.search(r'\d{1,2}-\d{1,2}(?:-\d{1,2})?', line):
+        elif re.search(record_pattern, line):
             records_data.append(line)
         # Otherwise it's likely a name
         elif not re.match(r'^[\d><\-\+\*]+', line):  # Skip lines that start with numbers/symbols
@@ -69,10 +140,9 @@ def parse_standings_multicolumn(text: str, debug: bool = False) -> List[Dict[str
                 names.append(name)
 
     if debug:
-        print(f"Debug: Extracted {len(names)} names, {len(records_data)} records, {len(percentages_data)} percentages")
+        print(f"Debug: Extracted {len(names)} fragmented names, {len(records_data)} records, {len(percentages_data)} percentages")
 
-    # Extract record/points data
-    standings = []
+    # Extract record/points data from fragmented lines
     record_entries = []
 
     for record_line in records_data:
@@ -82,8 +152,8 @@ def parse_standings_multicolumn(text: str, debug: bool = False) -> List[Dict[str
         record = None
         record_idx = -1
         for i, part in enumerate(parts):
-            if re.search(r'\d{1,2}-\d{1,2}(?:-\d{1,2})?', part):
-                record = part.rstrip('.')  # Remove trailing period if present
+            if re.search(record_pattern, part):
+                record = part.rstrip('.')
                 record_idx = i
                 break
 
@@ -103,13 +173,13 @@ def parse_standings_multicolumn(text: str, debug: bool = False) -> List[Dict[str
             'points': points
         })
 
-    # Match names with records and percentages
+    # Match fragmented names with records and percentages
     # If we have roughly equal numbers of percentages and records, match 1-to-1 (only OMW%)
     # Otherwise match 2-to-1 (OMW% and GW%)
     percentages_per_entry = 1 if len(percentages_data) <= len(record_entries) else 2
 
     for idx in range(max(len(names), len(record_entries))):
-        name = names[idx] if idx < len(names) else f"Unknown_{idx}"
+        name = names[idx] if idx < len(names) else f"Unknown_{idx + len(standings) + 1}"
 
         if idx < len(record_entries):
             record = record_entries[idx]['record']
@@ -134,12 +204,12 @@ def parse_standings_multicolumn(text: str, debug: bool = False) -> List[Dict[str
                 'points': points,
                 'omw': omw,
                 'gw': gw,
-                'rank': idx + 1
+                'rank': len(standings) + idx + 1
             }
             standings.append(entry)
 
             if debug:
-                print(f"Debug: Multicolumn entry {idx + 1}: {name}, {record}, Points={points}, OMW%={omw}, GW%={gw}")
+                print(f"Debug: Multicolumn entry {len(standings)}: {name}, {record}, Points={points}, OMW%={omw}, GW%={gw}")
 
     return standings
 
@@ -264,21 +334,28 @@ def parse_standings(text: str, debug: bool = False) -> List[Dict[str, any]]:
 
     lines = text.strip().split('\n')
 
-    # Detect table format: if many lines have names but no records, it's multi-column
+    # Detect table format: check if we have both standard format entries AND fragmented entries
     name_only_lines = []
     record_lines = []
+    standard_count = 0
+
     for line in lines:
         if any(kw in line.upper() for kw in ['RANK', 'MATCH', 'NAME', 'PLAYER', 'POINTS', 'ASOF']):
             continue
+        # Check for standard format: rank+name+record on same line
+        if re.match(r'^\d+\s+\w', line) and re.search(r'\d{1,2}-\d{1,2}(?:-\d{1,2})?', line):
+            standard_count += 1
+        # Check for records-only lines
         if re.search(r'\d{1,2}-\d{1,2}(?:-\d{1,2})?', line):
             record_lines.append(line)
-        elif line.strip() and not line[0].isdigit():
+        # Names without records
+        elif line.strip() and not any(c.isdigit() for c in line[:3]):
             name_only_lines.append(line)
 
-    # If we have many orphaned names and records in separate lines, use multi-column parsing
-    if len(name_only_lines) > 5 and len(record_lines) > 5:
+    # If we have mixed format (some standard entries + fragmented entries) or many orphaned entries, use multi-column
+    if (standard_count > 0 and len(name_only_lines) > 5) or len(record_lines) > len(name_only_lines) + 2:
         if debug:
-            print(f"Debug: Detected multi-column format ({len(name_only_lines)} names, {len(record_lines)} records)")
+            print(f"Debug: Detected mixed format ({standard_count} standard, {len(name_only_lines)} orphan names, {len(record_lines)} records)")
         return parse_standings_multicolumn(text, debug)
 
     # Pre-process: Group fragmented OCR lines using rank numbers as anchors
