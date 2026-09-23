@@ -195,8 +195,27 @@ def parse_standings_table_format(lines: List[str], record_pattern: str) -> Optio
         if not line or len(line.strip()) < 2:
             continue
 
-        # Extract rank (should be first number)
-        rank_match = re.match(r'^(\d{1,2})[.\s]+', line)
+        # Extract rank (should be first number), or convert misread OCR characters to digits
+        # Handle common OCR misreads like O (10), I (1), etc.
+        line_fixed = line
+        if len(line) > 1 and line[0] in 'OoIlZ':
+            # Check for two-digit rank misreads like "IO" (should be "10")
+            if line[0] in 'OoIl' and line[1].isdigit():
+                # "O#" or "I#" -> "1#" (rank 10-19, e.g., "O3" -> "13")
+                line_fixed = '1' + line[1:]
+            elif line[0] == 'O' and line[1] == ' ':
+                # "O " (standalone) -> likely "10 " where first digit got misread
+                line_fixed = '10 ' + line[2:].lstrip()
+            elif line[0] in 'OoIl' and line[1] == ' ':
+                # "I " or "l " -> "1 " (single digit misread)
+                line_fixed = '1 ' + line[2:].lstrip()
+            else:
+                # Other single digit misreads
+                ocr_to_digit = {'O': '0', 'o': '0', 'I': '1', 'l': '1', 'Z': '2'}
+                if line[0] in ocr_to_digit:
+                    line_fixed = ocr_to_digit[line[0]] + line[1:]
+
+        rank_match = re.match(r'^(\d{1,2})[.\s]+', line_fixed)
         if not rank_match:
             # No rank at start: might be orphaned record or orphaned name
             records = re.findall(record_pattern, line)
@@ -206,10 +225,15 @@ def parse_standings_table_format(lines: List[str], record_pattern: str) -> Optio
             continue
 
         rank = int(rank_match.group(1))
+
+        # Skip rank 0 or very high ranks (likely garbage/misread)
+        if rank == 0 or rank > 50:
+            continue
+
         last_complete_rank = rank
 
-        # Remove rank from line for further processing
-        line_without_rank = re.sub(r'^\d{1,2}[.\s]+', '', line).strip()
+        # Remove rank from fixed line for further processing
+        line_without_rank = re.sub(r'^\d{1,2}[.\s]+', '', line_fixed).strip()
 
         # Extract all records from the line
         records = re.findall(record_pattern, line)
@@ -316,7 +340,21 @@ def parse_standings_debug(ocr_text: str) -> tuple[List[Dict], dict]:  # type: ig
         if not line or len(line.strip()) < 2:
             continue
 
-        rank_match = re.match(r'^(\d{1,2})[.\s]+', line)
+        # Fix misread rank digits - same logic as main parser
+        line_fixed = line
+        if len(line) > 1 and line[0] in 'OoIlZ':
+            if line[0] in 'OoIl' and line[1].isdigit():
+                line_fixed = '1' + line[1:]
+            elif line[0] == 'O' and line[1] == ' ':
+                line_fixed = '10 ' + line[2:].lstrip()
+            elif line[0] in 'OoIl' and line[1] == ' ':
+                line_fixed = '1 ' + line[2:].lstrip()
+            else:
+                ocr_to_digit = {'O': '0', 'o': '0', 'I': '1', 'l': '1', 'Z': '2'}
+                if line[0] in ocr_to_digit:
+                    line_fixed = ocr_to_digit[line[0]] + line[1:]
+
+        rank_match = re.match(r'^(\d{1,2})[.\s]+', line_fixed)
         if not rank_match:
             records = re.findall(record_pattern, line)
             if records:
@@ -324,7 +362,12 @@ def parse_standings_debug(ocr_text: str) -> tuple[List[Dict], dict]:  # type: ig
             continue
 
         rank = int(rank_match.group(1))
-        line_without_rank = re.sub(r'^\d{1,2}[.\s]+', '', line).strip()
+
+        # Skip rank 0 or very high ranks (likely garbage/misread)
+        if rank == 0 or rank > 50:
+            continue
+
+        line_without_rank = re.sub(r'^\d{1,2}[.\s]+', '', line_fixed).strip()
 
         records = re.findall(record_pattern, line)
         if not records:
