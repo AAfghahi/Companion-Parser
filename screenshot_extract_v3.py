@@ -92,10 +92,24 @@ def extract_ocr_text(image_path: str) -> str:
 
 
 def clean_name(name: str) -> str:
-    """Clean player name: remove special chars, keep letters/spaces."""
-    name = name.replace('tS)', '').replace(')', '')
+    """Clean player name: remove OCR artifacts, normalize spacing."""
+    # Remove common OCR artifacts and special characters first
+    name = name.replace('tS)', '').replace('~', '')
+
+    # Remove trailing parentheses and artifacts like "i)" or ")" at end
+    name = re.sub(r'\s*\)+\s*$', '', name)  # Remove trailing ")" or multiple ")"
+    name = re.sub(r'\s+[i][\s)]*$', '', name)  # Remove trailing "i )" or "i)"
+    name = re.sub(r'[_\.\,]', '', name)  # Remove dots, commas, underscores
+
+    # Convert to ASCII, keeping only letters, spaces, and apostrophes/hyphens
     cleaned = name.encode('ascii', 'ignore').decode('ascii')
     cleaned = re.sub(r"[^a-zA-Z\s\-']", '', cleaned)
+
+    # Fix hyphens that should be spaces (e.g., "Michael-Ross" -> "Michael Ross")
+    # But keep apostrophes (e.g., "O'Sulli" -> "O'Sulli")
+    cleaned = re.sub(r'-([a-zA-Z])', r' \1', cleaned)
+
+    # Normalize whitespace
     cleaned = re.sub(r'\s+', ' ', cleaned)
     return cleaned.strip()
 
@@ -105,14 +119,31 @@ def recover_unknowns(standings: List[Dict], all_extracted_names: List[str]) -> L
     known_players_lower = {p.lower(): p for p in KNOWN_PLAYERS}
     used_names = set()
 
+    # First pass: mark all already-matched names as used (including fuzzy matches from standalone entries)
     for entry in standings:
-        name = entry['name']
-        name_lower = name.lower()
-
-        # Skip if already a known player (exact match)
+        name_lower = entry['name'].lower().strip()
+        # Check for exact match first
         if name_lower in known_players_lower:
             used_names.add(name_lower)
             entry['name'] = known_players_lower[name_lower]
+        # Also check if this name appears in KNOWN_PLAYERS (case-insensitive match)
+        # to avoid assigning the same player twice
+        else:
+            for known_player in KNOWN_PLAYERS:
+                if known_player.lower() == name_lower:
+                    used_names.add(name_lower)
+                    entry['name'] = known_player
+                    break
+
+    # Second pass: fuzzy match Unknown entries and partial names
+    for entry in standings:
+        name = entry['name']
+        name_lower = name.lower().strip()
+
+        # Skip if already matched to a known player
+        if name_lower in used_names:
+            continue
+        if name_lower in known_players_lower:
             continue
 
         # Get available players (not yet assigned)
@@ -437,12 +468,52 @@ def parse_standings_debug(ocr_text: str) -> tuple[List[Dict], dict]:  # type: ig
                 })
                 complete_count += 1
 
+    # Add recovery logic to debug function (same as production parser)
+    # Combine all names (standalone + orphaned) and match with records by position
+    all_names = standalone_names + orphaned_names
+
+    # Clean all names
+    cleaned_names = []
+    for name_text in all_names:
+        name = clean_name(name_text)
+        if name and len(name) > 1:
+            cleaned_names.append(name)
+
+    # Match names with records by position (1-to-1)
+    num_pairs = min(len(cleaned_names), len(orphaned_records))
+    for i in range(num_pairs):
+        name = cleaned_names[i]
+        record = orphaned_records[i]
+        points = calculate_points(record)
+        standings.append({
+            'rank': i + 1,
+            'name': name,
+            'record': record,
+            'points': points,
+            'omw': None,
+            'gw': None
+        })
+
+    # Handle unmatched records
+    if len(orphaned_records) > num_pairs:
+        for i in range(num_pairs, len(orphaned_records)):
+            record = orphaned_records[i]
+            standings.append({
+                'rank': i + 1,
+                'name': f'Unknown_{i+1}',
+                'record': record,
+                'points': calculate_points(record),
+                'omw': None,
+                'gw': None
+            })
+
     return standings, {
         'orphaned_names': orphaned_names,
         'orphaned_records': orphaned_records,
         'standalone_names': standalone_names,
         'standalone_ranks': standalone_ranks,
-        'complete_entries': complete_count
+        'complete_entries': complete_count,
+        'recovered_entries': len(standings) - complete_count
     }
 
 
