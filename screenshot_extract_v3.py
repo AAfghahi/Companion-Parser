@@ -68,10 +68,18 @@ except ImportError:
 
 def preprocess_image(image: Image.Image) -> Image.Image:
     """Apply contrast/sharpness enhancement."""
+    # Convert to grayscale for more consistent OCR across platforms
+    if image.mode != 'L':
+        image = image.convert('L')
+
+    # Apply moderate contrast enhancement (reduced from 1.5 to 1.2)
     enhancer = ImageEnhance.Contrast(image)
-    image = enhancer.enhance(1.5)
+    image = enhancer.enhance(1.2)
+
+    # Apply moderate sharpness enhancement (reduced from 2.0 to 1.5)
     enhancer = ImageEnhance.Sharpness(image)
-    image = enhancer.enhance(2.0)
+    image = enhancer.enhance(1.5)
+
     return image
 
 
