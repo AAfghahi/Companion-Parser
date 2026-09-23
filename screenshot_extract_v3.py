@@ -93,24 +93,31 @@ def clean_name(name: str) -> str:
 
 def recover_unknowns(standings: List[Dict], all_extracted_names: List[str]) -> List[Dict]:
     """Recover Unknown entries and truncated names by fuzzy matching against known players."""
-    used_names = {e['name'].lower() for e in standings if not e['name'].startswith('Unknown_') and len(e['name']) > 5}
+    known_players_lower = {p.lower(): p for p in KNOWN_PLAYERS}
+    used_names = set()
 
     for entry in standings:
         name = entry['name']
+        name_lower = name.lower()
 
-        is_unknown = name.startswith('Unknown_')
-        is_truncated = len(name) < 8 and not is_unknown
-
-        if not (is_unknown or is_truncated):
+        # Skip if already a known player (exact match)
+        if name_lower in known_players_lower:
+            used_names.add(name_lower)
+            entry['name'] = known_players_lower[name_lower]
             continue
 
+        # Get available players (not yet assigned)
         available_players = [p for p in KNOWN_PLAYERS if p.lower() not in used_names]
-
         if not available_players:
             continue
 
-        matches = get_close_matches(name, available_players, n=1, cutoff=0.6)
+        # Determine cutoff: more lenient for Unknown entries, stricter for partial names
+        if name.startswith('Unknown_'):
+            cutoff = 0.4
+        else:
+            cutoff = 0.6
 
+        matches = get_close_matches(name, available_players, n=1, cutoff=cutoff)
         if matches:
             best_match = matches[0]
             entry['name'] = best_match
