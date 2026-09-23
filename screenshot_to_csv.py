@@ -150,38 +150,68 @@ def parse_standings(text: str, debug: bool = False) -> List[Dict[str, any]]:
 
     lines = text.strip().split('\n')
 
-    # Pre-process: Use record patterns (W-L-D) as anchors instead of rank numbers
-    # This is more reliable for fragmented OCR output
-    # Split lines containing multiple records into separate entries
-    record_pattern = r'\d{1,2}-\d{1,2}(?:-\d{1,2})?'
+    # Pre-process: Group fragmented OCR lines using rank numbers as anchors
+    # When a line starts with a rank number, it's a new entry anchor
+    # All following lines without rank numbers belong to that entry
     merged_lines = []
+    current_entry = []
+
+    def is_header_line(line: str) -> bool:
+        """Check if line is a header line (to be skipped)."""
+        line_upper = line.upper()
+        # Skip timestamps
+        if line_upper.startswith(('10:', '11:', '12:', '1:', '2:', '3:', '4:', '5:', '6:', '7:', '8:', '9:')):
+            return True
+        # Check for lines with multiple header keywords (more reliable than single keyword)
+        header_keywords = ['RANK', 'MATCH', 'STANDINGS', 'NAME', 'POINTS', 'ASOF', 'AS OF', 'W-L-D', 'OMW%', 'GW%']
+        keyword_count = sum(1 for kw in header_keywords if kw in line_upper)
+        if keyword_count >= 2:  # Header lines typically have multiple keywords
+            return True
+        # Skip obvious noise lines (special chars with minimal content)
+        if line.strip() in ['<', '>', '~', '&', 'wl', 'wl > 68+'] or len(line.strip()) <= 2:
+            return True
+        return False
 
     for line in lines:
         line = line.strip()
         if not line:
             continue
 
-        # Find all record patterns in this line
-        records = list(re.finditer(record_pattern, line))
+        # Check if line starts with a rank number (1-50), possibly with period
+        parts = line.split()
+        rank = None
+        if parts:
+            # Try to extract rank from first part (may have period: "11.", "13.", etc)
+            rank_str = parts[0].rstrip('.')
+            if rank_str.isdigit():
+                rank = int(rank_str)
+                if 1 <= rank <= 50:
+                    # New entry anchor - save previous entry if exists
+                    if current_entry:
+                        merged_lines.append(' '.join(current_entry))
+                    current_entry = [line]
+                    continue
 
-        if not records:
-            # No records on this line - might be a header or orphaned data
-            if not any(kw in line.upper() for kw in ['RANK', 'MATCH', 'STANDINGS', 'NAME', 'POINTS', 'ASOF']):
-                merged_lines.append(line)
+        # Also check for OCR corruption where rank got corrupted but we still have data
+        # Look for lines with "> " at start followed by data (OCR corruption for rank)
+        if line.startswith('>') and len(parts) > 1:
+            # This might be a corrupted rank entry, treat as new entry
+            if current_entry:
+                merged_lines.append(' '.join(current_entry))
+            current_entry = [line]
             continue
 
-        if len(records) == 1:
-            # Single record - keep line as is
-            merged_lines.append(line)
+        # Add to current entry or save as standalone
+        if current_entry:
+            current_entry.append(line)
         else:
-            # Multiple records on one line - split by record pattern
-            for i, record_match in enumerate(records):
-                start_pos = 0 if i == 0 else records[i-1].end()
-                end_pos = len(line) if i == len(records) - 1 else records[i+1].start()
+            # Standalone line (header or orphaned data)
+            if not is_header_line(line):
+                merged_lines.append(line)
 
-                segment = line[start_pos:end_pos].strip()
-                if segment:
-                    merged_lines.append(segment)
+    # Save last entry
+    if current_entry:
+        merged_lines.append(' '.join(current_entry))
 
     standings = []
     orphaned_records = []  # Records without rank/name
