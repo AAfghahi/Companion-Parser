@@ -65,11 +65,17 @@ def calculate_points(record: str) -> int:
     return points
 
 
-def extract_text_from_image(image_path: str) -> str:
+def extract_text_from_image(image_path: str, debug: bool = False) -> str:
     """Extract text from image using OCR."""
     try:
         image = Image.open(image_path)
         text = pytesseract.image_to_string(image)
+        if debug:
+            print(f"Debug: OCR extracted {len(text)} characters")
+            print("Debug: Raw OCR text:")
+            print("---")
+            print(text)
+            print("---")
         return text
     except Exception as e:
         print(f"Error extracting text from {image_path}: {e}")
@@ -89,14 +95,20 @@ def parse_standings(text: str, debug: bool = False) -> List[Dict[str, any]]:
     lines = text.strip().split('\n')
     standings = []
 
-    for line in lines:
+    for line_num, line in enumerate(lines, 1):
         line = line.strip()
-        if not line or line.upper().startswith('RANK') or line.upper().startswith('MATCH'):
+        if not line:
+            continue
+        if line.upper().startswith('RANK') or line.upper().startswith('MATCH'):
+            if debug:
+                print(f"Debug: Skipped header line {line_num}: {line[:60]}")
             continue
 
         parts = line.split()
 
         if len(parts) < 3:
+            if debug:
+                print(f"Debug: Line {line_num} has too few parts ({len(parts)}): {line[:60]}")
             continue
 
         try:
@@ -118,6 +130,8 @@ def parse_standings(text: str, debug: bool = False) -> List[Dict[str, any]]:
                     break
 
             if not record:
+                if debug:
+                    print(f"Debug: Line {line_num} - No W-L-D record found: {line[:60]}")
                 continue
 
             # Extract points (should be right before the record)
@@ -166,13 +180,16 @@ def parse_standings(text: str, debug: bool = False) -> List[Dict[str, any]]:
                 gw = percentages[1]
 
             if name and record:
-                standings.append({
+                entry = {
                     'name': name.strip(),
                     'record': record,
                     'points': points,
                     'omw': omw,
                     'gw': gw
-                })
+                }
+                standings.append(entry)
+                if debug:
+                    print(f"Debug: Line {line_num} ✓ Parsed: {name.strip()}, Points={points}, OMW%={omw}, GW%={gw}")
 
         except Exception as e:
             # Skip lines that don't parse
@@ -193,7 +210,7 @@ def process_screenshot(image_path: str, week_start: Optional[str] = None, debug:
         return []
 
     print(f"Processing: {image_path}")
-    text = extract_text_from_image(image_path)
+    text = extract_text_from_image(image_path, debug=debug)
     standings = parse_standings(text, debug=debug)
 
     if week_start is None:
