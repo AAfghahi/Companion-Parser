@@ -42,12 +42,7 @@ Thumbs.db
 # Output files
 standings.csv
 *.csv
-
-# Node
-node_modules/
-package-lock.json
-
-# Environment
-.env.local
-.env
 *.xlsx
+
+# Dependencies
+node_modules/
