@@ -13,6 +13,7 @@ import os
 import sys
 from pathlib import Path
 import re
+import csv
 from typing import List, Dict, Optional
 from datetime import datetime, timedelta
 from difflib import get_close_matches
@@ -445,6 +446,41 @@ def write_excel(standings: List[Dict], output_path: str):
     print(f"✓ Total entries: {len(standings)}")
 
 
+def write_csv(standings: List[Dict], output_path: str):
+    """Write standings to CSV file."""
+    if not standings:
+        print("No data to write")
+        return
+
+    # Check if week field exists in any entry
+    has_week = any('week' in entry for entry in standings)
+
+    # Column order: Name, Record, Week (if present), Points, OMW%
+    headers = ['Name', 'Record']
+    if has_week:
+        headers.append('Week')
+    headers.append('Points')
+    headers.append('OMW%')
+
+    with open(output_path, 'w', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=headers)
+        writer.writeheader()
+
+        for entry in standings:
+            row = {
+                'Name': entry.get('name', ''),
+                'Record': entry.get('record', ''),
+                'Points': entry.get('points', 0),
+                'OMW%': entry.get('omw', '')
+            }
+            if has_week:
+                row['Week'] = entry.get('week', '')
+            writer.writerow(row)
+
+    print(f"✓ CSV written: {output_path}")
+    print(f"✓ Total entries: {len(standings)}")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='Extract MTG standings from screenshots (supports multiple files)',
@@ -455,11 +491,14 @@ Examples:
   python screenshot_extract_v3.py screenshot.png -d 9/14/26
   python screenshot_extract_v3.py img1.png img2.png -o merged.xlsx
   python screenshot_extract_v3.py img1.png img2.png -d 9/21/26 --debug
+  python screenshot_extract_v3.py img1.png img2.png -f csv
+  python screenshot_extract_v3.py img1.png img2.png -o standings.csv -f csv
         '''
     )
     parser.add_argument('images', nargs='+', help='Screenshot image file(s)')
-    parser.add_argument('-o', '--output', help='Output Excel file (default: standings_M_D_YY.xlsx with date)')
+    parser.add_argument('-o', '--output', help='Output file (default: standings_M_D_YY.xlsx or .csv with date)')
     parser.add_argument('-d', '--date', help='Week start date in M/D/YY format (default: current week Monday)')
+    parser.add_argument('-f', '--format', choices=['xlsx', 'csv'], default='xlsx', help='Output format (default: xlsx)')
     parser.add_argument('--debug', action='store_true', help='Show debug output')
 
     args = parser.parse_args()
@@ -512,11 +551,16 @@ Examples:
     if args.output:
         output_file = args.output
     else:
-        # Auto-generate filename: standings_M_D_YY.xlsx
+        # Auto-generate filename with appropriate extension
         week_date_formatted = week_date.replace('/', '_')
-        output_file = f'standings_{week_date_formatted}.xlsx'
+        ext = 'csv' if args.format == 'csv' else 'xlsx'
+        output_file = f'standings_{week_date_formatted}.{ext}'
 
-    write_excel(merged_standings, output_file)
+    # Write output in specified format
+    if args.format == 'csv':
+        write_csv(merged_standings, output_file)
+    else:
+        write_excel(merged_standings, output_file)
 
 
 if __name__ == '__main__':
