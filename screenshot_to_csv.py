@@ -204,21 +204,6 @@ def parse_standings_multicolumn(text: str, debug: bool = False) -> List[Dict[str
     if debug:
         print(f"Debug: After deduplication: {len(names)} unique names")
 
-    # Check if we're missing Tommy Adams (common OCR issue on this screenshot format)
-    # Tommy Adams should be between Alexander Sta and ClaytonWatki with a 2-1-0 record
-    if 'Alexander Sta' in names and 'ClaytonWatki' in names:
-        alex_idx = names.index('Alexander Sta')
-        clayton_idx = names.index('ClaytonWatki')
-        if clayton_idx == alex_idx + 1:  # They're consecutive (Tommy Adams is missing between them)
-            # Verify by checking if record at index alex_idx+1 is a 2-1-0 (Tommy Adams' record)
-            if alex_idx + 1 < len(record_entries):
-                next_record = record_entries[alex_idx + 1]['record']
-                if '2-1-0' in next_record and 'Tommy Adams' not in names:
-                    # Insert Tommy Adams between them
-                    names.insert(clayton_idx, 'Tommy Adams')
-                    if debug:
-                        print(f"Debug: Inserted missing 'Tommy Adams' between Alexander Sta and ClaytonWatki")
-
     # Match fragmented names with records and percentages
     # If we have roughly equal numbers of percentages and records, match 1-to-1 (only OMW%)
     # Otherwise match 2-to-1 (OMW% and GW%)
