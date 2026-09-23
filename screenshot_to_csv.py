@@ -115,15 +115,28 @@ def parse_standings_multicolumn(text: str, debug: bool = False) -> List[Dict[str
     records_data = []
     percentages_data = []
 
+    # Track if we've seen the NAME header (to avoid extracting names from metadata)
+    name_section_started = False
+
     for line in fragmented_lines:
         if not line or len(line) < 2:
             continue
 
-        # Skip header lines and section headers
-        if any(kw in line.upper() for kw in ['RANK', 'MATCH', 'STANDINGS', 'PLAYER', 'ASOF', 'AS OF', 'W-L-D', 'GW%']):
+        # Skip lines starting with special characters (like "» Tommy Adams" which is not a table row)
+        if line.startswith(('»', '>', '<', '◆', '♦', '●', '◉')):
             continue
-        # Skip "NAME" and "OMW%" headers
-        if line.upper() in ['NAME', 'POINTS', 'OMW%', 'POINTS W-L-D']:
+
+        # Track when we enter the NAME section
+        if line.upper() == 'NAME':
+            name_section_started = True
+            continue
+
+        # Track when we leave the NAME section (enter POINTS or other sections)
+        if any(kw in line.upper() for kw in ['POINTS', 'OMW%', 'POINTS W-L-D']):
+            name_section_started = False
+
+        # Skip other header lines
+        if any(kw in line.upper() for kw in ['RANK', 'MATCH', 'STANDINGS', 'PLAYER', 'ASOF', 'AS OF', 'W-L-D', 'GW%']):
             continue
 
         # Check if this line has percentages (OMW% or GW%)
@@ -134,14 +147,18 @@ def parse_standings_multicolumn(text: str, debug: bool = False) -> List[Dict[str
         # Check if this line has a record (W-L-D pattern)
         elif re.search(record_pattern, line):
             records_data.append(line)
-        # Otherwise it's likely a name
-        elif not re.match(r'^[\d><\-\+\*]+', line):  # Skip lines that start with numbers/symbols
+        # Otherwise it's likely a name (only extract if we're in the NAME section)
+        # Skip lines that start with numbers or special symbols (», >, <, arrows, etc.)
+        elif name_section_started and not re.match(r'^[\d><\-\+\*»◆♦●◉]+', line):
             name = clean_name(line)
             if name:
                 names.append(name)
+                if debug:
+                    print(f"Debug: Extracted fragmented name: {repr(name)} from line: {repr(line[:50])}")
 
     if debug:
         print(f"Debug: Extracted {len(names)} fragmented names, {len(records_data)} records, {len(percentages_data)} percentages")
+        print(f"Debug: Names list: {names}")
 
     # Extract record/points data from fragmented lines
     record_entries = []
@@ -173,6 +190,19 @@ def parse_standings_multicolumn(text: str, debug: bool = False) -> List[Dict[str
             'record': record,
             'points': points
         })
+
+    # Remove duplicate names caused by entries appearing in multiple places in OCR
+    # Keep the first occurrence of each name to avoid extracting from labels/headers
+    seen = set()
+    unique_names = []
+    for name in names:
+        if name not in seen:
+            unique_names.append(name)
+            seen.add(name)
+    names = unique_names
+
+    if debug:
+        print(f"Debug: After deduplication: {len(names)} unique names")
 
     # Match fragmented names with records and percentages
     # If we have roughly equal numbers of percentages and records, match 1-to-1 (only OMW%)
