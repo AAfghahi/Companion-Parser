@@ -93,9 +93,45 @@ def parse_standings(text: str, debug: bool = False) -> List[Dict[str, any]]:
     Tiebreakers (in order): Points → OMW% → GW%
     """
     lines = text.strip().split('\n')
+
+    # Pre-process: merge fragmented lines caused by colored rows
+    # Colored backgrounds break OCR output - data gets split across multiple lines
+    # Strategy: Group all lines until next rank number, merge fragments in each group
+    merged_lines = []
+    current_group = []
+
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+
+        parts = line.split()
+
+        # Check if this line starts a new entry:
+        # - Begins with a rank number 1-50
+        # - Has at least 2 parts (rank + name/content)
+        is_new_entry = len(parts) >= 2 and parts[0].isdigit() and 1 <= int(parts[0]) <= 50
+
+        if is_new_entry:
+            # We found a new entry start
+            if current_group:
+                # Merge the previous group
+                merged_text = ' '.join(current_group)
+                merged_lines.append(merged_text)
+            # Start new group with this line
+            current_group = [line]
+        else:
+            # Fragment or continuation line - add to current group
+            current_group.append(line)
+
+    # Don't forget the last group
+    if current_group:
+        merged_text = ' '.join(current_group)
+        merged_lines.append(merged_text)
+
     standings = []
 
-    for line_num, line in enumerate(lines, 1):
+    for line_num, line in enumerate(merged_lines, 1):
         line = line.strip()
         if not line:
             continue
