@@ -375,6 +375,8 @@ def parse_standings_debug(ocr_text: str) -> tuple[List[Dict], dict]:  # type: ig
     standings = []
     orphaned_records = []
     orphaned_names = []
+    standalone_names = []
+    standalone_ranks = []
     complete_count = 0
 
     for line in lines[header_idx + 1:]:
@@ -406,6 +408,20 @@ def parse_standings_debug(ocr_text: str) -> tuple[List[Dict], dict]:  # type: ig
             records = re.findall(record_pattern, line)
             if records:
                 orphaned_records.append(records[0])
+                continue
+
+            # Check if line is just a rank number
+            if re.match(r'^\d{1,2}$', line.strip()):
+                standalone_ranks.append(int(line.strip()))
+                continue
+
+            # Check if line is a name
+            if any(c.isalpha() for c in line) and not re.search(r'\d{1,2}-\d{1,2}', line):
+                name = clean_name(line)
+                if name and len(name) > 1:
+                    standalone_names.append(name)
+                continue
+
             continue
 
         rank = int(rank_match.group(1))
@@ -450,6 +466,8 @@ def parse_standings_debug(ocr_text: str) -> tuple[List[Dict], dict]:  # type: ig
     return standings, {
         'orphaned_names': orphaned_names,
         'orphaned_records': orphaned_records,
+        'standalone_names': standalone_names,
+        'standalone_ranks': standalone_ranks,
         'complete_entries': complete_count
     }
 
@@ -758,6 +776,8 @@ Examples:
             print(f"  Complete entries: {debug_info['complete_entries']}")
             print(f"  Orphaned names: {len(debug_info['orphaned_names'])} - {debug_info['orphaned_names']}")
             print(f"  Orphaned records: {len(debug_info['orphaned_records'])} - {debug_info['orphaned_records']}")
+            print(f"  Standalone names: {len(debug_info['standalone_names'])} - {debug_info['standalone_names']}")
+            print(f"  Standalone ranks: {len(debug_info['standalone_ranks'])} - {debug_info['standalone_ranks']}")
             for entry in standings[:3]:
                 print(f"    {entry}")
         else:
