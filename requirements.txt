@@ -1,25 +1,3 @@
 Pillow>=10.0.0
 pytesseract>=0.3.10
 openpyxl>=3.0.0
-
-# PaddleOCR for robust colored text recognition (RECOMMENDED for colored row extraction)
-# This OCR engine is far superior to Tesseract for extracting text from colored backgrounds
-#
-# INSTALLATION INSTRUCTIONS:
-#
-# Option 1: Linux (Recommended - easiest installation)
-#   pip install paddleocr
-#
-# Option 2: macOS (Requires Rosetta 2 on Apple Silicon)
-#   pip install paddleocr
-#
-# Option 3: Windows (Requires Python 3.8+)
-#   Method A: Conda (RECOMMENDED for Windows)
-#     conda install -c conda-forge paddleocr
-#   Method B: pip with workarounds (if conda unavailable)
-#     pip install --upgrade setuptools wheel
-#     pip install paddlepaddle paddleocr
-#   If you hit PyYAML build errors, use WSL2 (Windows Subsystem for Linux)
-#
-# If PaddleOCR installation fails, the script falls back to Tesseract automatically
-# Tesseract extracts ~4 entries from colored rows; PaddleOCR extracts ~14+ entries

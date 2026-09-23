@@ -236,16 +236,14 @@ Environment variables from Vercel settings automatically available to API.
 The `screenshot_to_csv.py` tool extracts Magic: The Gathering tournament standings from screenshots using OCR.
 
 **Extracts:**
-- Player names (including from colored rows)
+- Player names and records from tournament standings
 - Win-Loss-Draw records (W-L-D format)
 - Match points (auto-calculated or extracted)
 - Week date
 - **OMW% (Opposition Match Win %)**
 - **GW% (Game Win Percentage)** - Third tiebreaker
 
-**OCR Engine:**
-- **PaddleOCR (recommended)** - Superior colored row extraction (~14-16 entries per screenshot)
-- **Tesseract (fallback)** - Auto-used if PaddleOCR unavailable (~4 entries, unreliable on colored rows)
+**Note:** Colored row entries (highlighted rows without rank numbers) are skipped for reliable extraction. Focus is on cleanly extracting all ranked entries.
 
 **Tiebreaker Order (Screenshot Tool):**
 1. Match Points (higher is better)
@@ -258,19 +256,13 @@ The `screenshot_to_csv.py` tool extracts Magic: The Gathering tournament standin
 ```
 RANK NAME POINTS W-L-D OMW% GW%
 1    Michael Ross  16    5-0-1  56.8%  62.5%
-5    Arash Afghahi 6     2-1-0  50.0%  55.0%  (colored row - extracted by PaddleOCR)
+2    Matt Riecks   9     3-0-0  44.4%  50.0%
 ```
 
 **Setup:**
 ```bash
 # Install dependencies
 pip install -r requirements.txt
-
-# Install PaddleOCR (RECOMMENDED for colored row support)
-# For Windows: See PADDLEOCR_WINDOWS_SETUP.md
-# For Mac/Linux: pip install paddleocr
-
-# If PaddleOCR installation fails, script falls back to Tesseract
 ```
 
 **Usage:**
@@ -292,6 +284,7 @@ python screenshot_to_csv.py standings.png --debug
 - Excel file with columns: Name, Record, Week, Points, OMW%, GW%
 - Filename includes date: `standings_M_D_YY.xlsx`
 - Sorted by Points (highest first), then OMW%, then GW%
+- Only includes ranked entries (colored rows are skipped for data quality)
 
 ## Common Tasks
 

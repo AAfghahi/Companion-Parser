@@ -21,19 +21,8 @@ try:
     import pytesseract
     TESSERACT_AVAILABLE = True
 except ImportError:
-    TESSERACT_AVAILABLE = False
-
-try:
-    from paddleocr import PaddleOCR
-    PADDLEOCR_AVAILABLE = True
-except ImportError:
-    PADDLEOCR_AVAILABLE = False
-
-if not TESSERACT_AVAILABLE and not PADDLEOCR_AVAILABLE:
     print("Error: Required packages not installed.")
     print("Please run: pip install -r requirements.txt")
-    print("For faster installation, PaddleOCR is recommended:")
-    print("  pip install paddleocr paddlepaddle")
     sys.exit(1)
 
 # Player opt-out list - players who don't want their data represented
@@ -127,37 +116,11 @@ def extract_text_from_image(image_path: str, debug: bool = False) -> str:
         # Preprocess image to remove colored backgrounds
         image = preprocess_image_for_ocr(image, debug=debug)
 
-        text = ""
-        ocr_engine = "unknown"
-
-        # Try PaddleOCR first (more robust for colored backgrounds)
-        if PADDLEOCR_AVAILABLE:
-            try:
-                if debug:
-                    print(f"Debug: Using PaddleOCR for text extraction")
-                ocr = PaddleOCR(use_angle_cls=True, lang='en')
-                result = ocr.ocr(image, cls=True)
-
-                # Format PaddleOCR results as text
-                lines = []
-                for line in result:
-                    if line:
-                        line_text = ' '.join([item[1][0] for item in line])
-                        lines.append(line_text)
-                text = '\n'.join(lines)
-                ocr_engine = "PaddleOCR"
-
-            except Exception as e:
-                if debug:
-                    print(f"Debug: PaddleOCR failed: {e}, falling back to Tesseract")
-                text = ""
-
-        # Fall back to Tesseract if PaddleOCR didn't work or isn't available
-        if not text and TESSERACT_AVAILABLE:
-            if debug:
-                print(f"Debug: Using Tesseract for text extraction")
-            text = pytesseract.image_to_string(image)
-            ocr_engine = "Tesseract"
+        # Use Tesseract for text extraction
+        if debug:
+            print(f"Debug: Using Tesseract for text extraction")
+        text = pytesseract.image_to_string(image)
+        ocr_engine = "Tesseract"
 
         if debug:
             print(f"Debug: {ocr_engine} extracted {len(text)} characters")
