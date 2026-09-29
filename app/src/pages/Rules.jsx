@@ -186,6 +186,11 @@ export default function Rules() {
           <p>
             If you do not want to participate in tracking or in the league we understand, Arash maintains an opt out list that automatically takes out names when he parses companion app results. Let him know, either in the discord or privately, that you are not interested and your results will not show up in the online tracker. If at anytime you change your mind that's obviously also fine and we can put you back in, though your previous results will be likely lost.
           </p>
+
+          <h4>5. This is Clayton, why did you have to start tracking the week I went 0-3?</h4>
+          <p>
+            Because it was too perfect. Though when the league actually starts I am going to erase all prior scores. This FAQ question will stay though to commemorate your 0-3
+          </p>
         </div>
       </div>
     </>
