@@ -717,17 +717,12 @@ def write_excel(standings: List[Dict], output_path: str):
     # Check if week field exists in any entry
     has_week = any('week' in entry for entry in standings)
 
-    # Check if GW% exists in any entry
-    has_gw = any('gw' in entry and entry['gw'] is not None for entry in standings)
-
-    # Column order: Name, Record, Week (if present), Points, OMW%, GW% (if present)
+    # Column order: Name, Record, Week (if present), Points, OMW%
     headers = ['Name', 'Record']
     if has_week:
         headers.append('Week')
     headers.append('Points')
     headers.append('OMW%')
-    if has_gw:
-        headers.append('GW%')
 
     for col, header in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col)
@@ -767,13 +762,6 @@ def write_excel(standings: List[Dict], output_path: str):
         cell = ws.cell(row=row_idx, column=col_idx)
         cell.value = entry.get('omw', '')
         cell.alignment = Alignment(horizontal="center", vertical="center")
-        col_idx += 1
-
-        if has_gw:
-            # GW% (centered)
-            cell = ws.cell(row=row_idx, column=col_idx)
-            cell.value = entry.get('gw', '')
-            cell.alignment = Alignment(horizontal="center", vertical="center")
 
     # Auto-adjust column widths
     ws.column_dimensions['A'].width = 20  # Name
@@ -782,13 +770,9 @@ def write_excel(standings: List[Dict], output_path: str):
         ws.column_dimensions['C'].width = 12  # Week
         ws.column_dimensions['D'].width = 10  # Points
         ws.column_dimensions['E'].width = 10  # OMW%
-        if has_gw:
-            ws.column_dimensions['F'].width = 10  # GW%
     else:
         ws.column_dimensions['C'].width = 10  # Points
         ws.column_dimensions['D'].width = 10  # OMW%
-        if has_gw:
-            ws.column_dimensions['E'].width = 10  # GW%
 
     wb.save(output_path)
     print(f"✓ Excel written: {output_path}")
@@ -803,16 +787,13 @@ def write_csv(standings: List[Dict], output_path: str):
 
     # Check if week field exists in any entry
     has_week = any('week' in entry for entry in standings)
-    has_gw = any('gw' in entry and entry['gw'] is not None for entry in standings)
 
-    # Column order: Name, Record, Week (if present), Points, OMW%, GW% (if present)
+    # Column order: Name, Record, Week (if present), Points, OMW%
     headers = ['Name', 'Record']
     if has_week:
         headers.append('Week')
     headers.append('Points')
     headers.append('OMW%')
-    if has_gw:
-        headers.append('GW%')
 
     with open(output_path, 'w', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=headers)
@@ -827,8 +808,6 @@ def write_csv(standings: List[Dict], output_path: str):
             }
             if has_week:
                 row['Week'] = entry.get('week', '')
-            if has_gw:
-                row['GW%'] = entry.get('gw', '')
             writer.writerow(row)
 
     print(f"✓ CSV written: {output_path}")

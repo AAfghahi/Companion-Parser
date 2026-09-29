@@ -51,12 +51,9 @@ export default function SeasonHistory() {
       data = data.filter(s => s.week === weekFilter);
     }
 
-    // Sort by points (desc) → GW% (desc) → OMW% (desc)
+    // Sort by points (desc) → OMW% (desc)
     data = data.sort((a, b) => {
       if (b.points !== a.points) return b.points - a.points;
-      const bGw = parseFloat(b.gwPercent) || 0;
-      const aGw = parseFloat(a.gwPercent) || 0;
-      if (bGw !== aGw) return bGw - aGw;
       const bOmw = parseFloat(b.omwPercent) || 0;
       const aOmw = parseFloat(a.omwPercent) || 0;
       return bOmw - aOmw;
@@ -110,9 +107,6 @@ export default function SeasonHistory() {
       }))
       .sort((a, b) => {
         if (b.total !== a.total) return b.total - a.total;
-        const bGw = parseFloat(b.gwPercent) || 0;
-        const aGw = parseFloat(a.gwPercent) || 0;
-        if (bGw !== aGw) return bGw - aGw;
         const bOmw = parseFloat(b.omwPercent) || 0;
         const aOmw = parseFloat(a.omwPercent) || 0;
         return bOmw - aOmw;
@@ -214,7 +208,6 @@ export default function SeasonHistory() {
                     <th>Points</th>
                     <th>Record</th>
                     <th>OMW%</th>
-                    <th>GW%</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -226,12 +219,11 @@ export default function SeasonHistory() {
                         <td><strong>{entry.points}</strong></td>
                         <td>{entry.record || '-'}</td>
                         <td>{entry.omwPercent || '-'}</td>
-                        <td>{entry.gwPercent || '-'}</td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="6" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
+                      <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
                         No data available
                       </td>
                     </tr>
@@ -271,7 +263,6 @@ export default function SeasonHistory() {
                     <th>Tournaments</th>
                     <th>Avg Points</th>
                     <th>OMW%</th>
-                    <th>GW%</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -284,12 +275,11 @@ export default function SeasonHistory() {
                         <td>{player.count}</td>
                         <td>{player.avg}</td>
                         <td>{player.omwPercent || '-'}</td>
-                        <td>{player.gwPercent || '-'}</td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
+                      <td colSpan="6" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
                         No data available
                       </td>
                     </tr>
