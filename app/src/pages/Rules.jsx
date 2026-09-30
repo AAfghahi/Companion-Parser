@@ -71,7 +71,7 @@ const rulesStyles = `
   }
 
   .screenshot-example img {
-    max-width: 100%;
+    max-width: 400px;
     height: auto;
     border-radius: 8px;
     border: 1px solid var(--border);
