@@ -58,6 +58,26 @@ const rulesStyles = `
   .rules-content a:hover {
     text-decoration: underline;
   }
+
+  .screenshot-example {
+    margin: 30px 0;
+  }
+
+  .screenshot-example h5 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    color: var(--text-primary);
+    font-size: 1em;
+  }
+
+  .screenshot-example img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    display: block;
+    margin-bottom: 20px;
+  }
 `;
 
 export default function Rules() {
@@ -161,6 +181,16 @@ export default function Rules() {
           <p>
             In order to get an accurate assessment of all players, Arash needs a screenshot, or shots, of all players at the events. That means that if there are more players than fits one phone screenshot, please take multiple. If a person's name shows up multiple times, that's fine the parser accounts for that (as does Arash's eyes when he reviews the spreadsheet).
           </p>
+
+          <div className="screenshot-example">
+            <h5>This is a perfect screenshot:</h5>
+            <img src="/images/perfect-screenshot.webp" alt="Perfect screenshot example showing complete standings with all players visible" />
+          </div>
+
+          <div className="screenshot-example">
+            <h5>This is an acceptable screenshot:</h5>
+            <img src="/images/acceptable-screenshot.webp" alt="Acceptable screenshot example showing standings with some players visible" />
+          </div>
 
           <h3>FAQ</h3>
 
