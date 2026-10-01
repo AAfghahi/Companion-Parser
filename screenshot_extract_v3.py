@@ -55,7 +55,7 @@ KNOWN_PLAYERS = [
 ]
 
 try:
-    from PIL import Image, ImageEnhance
+    from PIL import Image, ImageChops, ImageOps
     import pytesseract
 except ImportError:
     print("Error: Required packages not installed. Run: pip install -r requirements.txt")
@@ -70,27 +70,35 @@ except ImportError:
 
 
 def preprocess_image(image: Image.Image) -> Image.Image:
-    """Apply contrast/sharpness enhancement."""
-    # Convert to grayscale for more consistent OCR across platforms
-    if image.mode != 'L':
-        image = image.convert('L')
+    """Isolate the table text as black-on-white for OCR.
 
-    # Apply moderate contrast enhancement (reduced from 1.5 to 1.2)
-    enhancer = ImageEnhance.Contrast(image)
-    image = enhancer.enhance(1.2)
+    Standings text is white, or orange for the viewing player's row, on a
+    dark background - or white on a purple highlight bar. Grayscale alone
+    leaves those rows too low-contrast for Tesseract, so build a mask by
+    colour instead: white pixels (all channels bright) and orange pixels
+    (strong red, little blue) become text, everything else (dark art,
+    purple highlight) becomes background.
+    """
+    r, g, b = image.convert('RGB').split()
 
-    # Apply moderate sharpness enhancement (reduced from 2.0 to 1.5)
-    enhancer = ImageEnhance.Sharpness(image)
-    image = enhancer.enhance(1.5)
+    white = ImageChops.darker(r, ImageChops.darker(g, b)).point(lambda v: 255 if v > 170 else 0)
+    orange = ImageChops.darker(
+        ImageChops.subtract(r, b).point(lambda v: 255 if v > 80 else 0),
+        r.point(lambda v: 255 if v > 150 else 0),
+    )
+    image = ImageOps.invert(ImageChops.lighter(white, orange))
 
-    return image
+    # Upscale so thin glyphs survive thresholding
+    return image.resize((image.width * 2, image.height * 2), Image.LANCZOS)
 
 
 def extract_ocr_text(image_path: str) -> str:
     """Extract text from image using Tesseract."""
     image = Image.open(image_path)
     image = preprocess_image(image)
-    text = pytesseract.image_to_string(image)
+    # psm 6: treat the table as one uniform block so each row stays on one
+    # line instead of being split into separate name / stats columns
+    text = pytesseract.image_to_string(image, config='--psm 6')
     return text
 
 
@@ -248,6 +256,9 @@ def split_row(text: str) -> Optional[tuple]:
 
     tail = text[m.end():]
     percents = re.findall(r'(\d+(?:\.\d+)?)\s*%', tail)
+    # OCR sometimes drops the decimal point ("44.4%" -> "444%")
+    percents = [f"{p[:2]}.{p[2:]}" if '.' not in p and len(p) == 3 and int(p) > 100 else p
+                for p in percents]
 
     name_tokens = text[:m.start()].split()
     points_token = None
