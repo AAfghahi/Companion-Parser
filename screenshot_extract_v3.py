@@ -49,6 +49,7 @@ KNOWN_PLAYERS = [
     'Nathan Shiflet',
     'Nick Caroselli',
     'arash afghahi',
+    'Markus Leben',
 ]
 
 try:
@@ -95,6 +96,13 @@ def clean_name(name: str) -> str:
     """Clean player name: remove OCR artifacts, normalize spacing."""
     # Remove common OCR artifacts and special characters first
     name = name.replace('tS)', '').replace('~', '')
+
+    # Strip truncation ellipses ("Forrest Rineh..." / "Rineh…")
+    name = name.replace('\u2026', ' ').replace('...', ' ')
+
+    # Drop tokens containing digits or '%' - these are OCR misreads of emoji
+    # or special characters in display names (e.g. "Markus ❄❄" -> "Markus 32%")
+    name = ' '.join(t for t in name.split() if not re.search(r'[\d%]', t))
 
     # Remove trailing parentheses and artifacts like "i)" or ")" at end
     name = re.sub(r'\s*\)+\s*$', '', name)  # Remove trailing ")" or multiple ")"
@@ -195,6 +203,59 @@ def calculate_points(record: str) -> int:
     losses = int(match.group(2))
     draws = int(match.group(3)) if match.group(3) else 0
     return wins * 3 + draws * 1
+
+
+def repair_record(record: str, points_token: Optional[str]) -> str:
+    """Repair a W-L-D record where OCR dropped a hyphen.
+
+    e.g. "21-0" -> "2-1-0", "1-200" -> "1-2-0". Candidates are validated
+    against the points column when it was read.
+    """
+    parts = record.split('-')
+    if len(parts) != 2 or not any(len(p) >= 2 for p in parts):
+        return record
+
+    candidates = []
+    for i, part in enumerate(parts):
+        for k in range(1, len(part)):
+            split = parts[:i] + [part[:k], part[k:]] + parts[i + 1:]
+            candidates.append('-'.join(str(int(x)) for x in split))
+
+    points = re.match(r'\d+', points_token or '')
+    if points:
+        for cand in candidates:
+            if calculate_points(cand) == int(points.group(0)):
+                return cand
+        return record
+    return candidates[0]
+
+
+def split_row(text: str) -> Optional[tuple]:
+    """Split a row (rank already removed) into (name_text, record, percents).
+
+    Layout is: NAME  POINTS  W-L-D  OMW%  [GW%]. The last record-like token
+    anchors the row: everything after it is percentages, the token right
+    before it is the points column, and the rest is the name. This keeps
+    stray digits/percent signs that OCR produces from emoji in names out of
+    the stats.
+    """
+    matches = list(re.finditer(r'(?<![\d.])\d{1,3}-\d{1,3}(?:-\d{1,2})?(?![\d%])', text))
+    if not matches:
+        return None
+    m = matches[-1]
+
+    tail = text[m.end():]
+    percents = re.findall(r'(\d+(?:\.\d+)?)\s*%', tail)
+
+    name_tokens = text[:m.start()].split()
+    points_token = None
+    # Points column: a number, or a short OCR misread of one (e.g. "7" -> "v")
+    if name_tokens and (re.fullmatch(r'\d{1,2}\)?', name_tokens[-1]) or
+                        (len(name_tokens) > 1 and re.fullmatch(r'[a-z]', name_tokens[-1]))):
+        points_token = name_tokens.pop()
+
+    record = repair_record(m.group(0), points_token)
+    return ' '.join(name_tokens), record, percents
 
 
 def get_week_start_date() -> str:
@@ -302,28 +363,14 @@ def parse_standings_table_format(lines: List[str], record_pattern: str) -> Optio
         # Remove rank from fixed line for further processing
         line_without_rank = re.sub(r'^\d{1,2}[.\s]+', '', line_fixed).strip()
 
-        # Extract all records from the line
-        records = re.findall(record_pattern, line)
-        if not records:
+        # Split row into name / record / percentages
+        row = split_row(line_without_rank)
+        if not row:
             # No record: might be orphaned name (ignore rank, just collect name)
             orphaned_names.append(line_without_rank)
             continue
 
-        record = records[0]
-
-        # Extract all percentages from the line
-        percents = re.findall(r'(\d+(?:\.\d+)?)\s*%', line)
-
-        # Extract name: remove record and percentages, clean up
-        name_candidate = line_without_rank
-        # Remove all records
-        for rec in records:
-            name_candidate = name_candidate.replace(rec, '').strip()
-        # Remove all percentages
-        for perc in percents:
-            name_candidate = name_candidate.replace(f"{perc}%", '').replace(perc, '').strip()
-        # Remove points (number before record)
-        name_candidate = re.sub(r'\s*\d+\s*(?=' + record_pattern + ')', '', name_candidate).strip()
+        name_candidate, record, percents = row
 
         if name_candidate and len(name_candidate) > 1:
             name = clean_name(name_candidate)
@@ -457,21 +504,13 @@ def parse_standings_debug(ocr_text: str) -> tuple[List[Dict], dict]:  # type: ig
 
         line_without_rank = re.sub(r'^\d{1,2}[.\s]+', '', line_fixed).strip()
 
-        records = re.findall(record_pattern, line)
-        if not records:
+        row = split_row(line_without_rank)
+        if not row:
             # Store just the name text, ignore the rank (we'll match by position instead)
             orphaned_names.append(line_without_rank)
             continue
 
-        record = records[0]
-        percents = re.findall(r'(\d+(?:\.\d+)?)\s*%', line)
-
-        name_candidate = line_without_rank
-        for rec in records:
-            name_candidate = name_candidate.replace(rec, '').strip()
-        for perc in percents:
-            name_candidate = name_candidate.replace(f"{perc}%", '').replace(perc, '').strip()
-        name_candidate = re.sub(r'\s*\d+\s*(?=' + record_pattern + ')', '', name_candidate).strip()
+        name_candidate, record, percents = row
 
         if name_candidate and len(name_candidate) > 1:
             name = clean_name(name_candidate)
