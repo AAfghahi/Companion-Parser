@@ -769,11 +769,10 @@ def write_excel(standings: List[Dict], output_path: str):
     # Check if week field exists in any entry
     has_week = any('week' in entry for entry in standings)
 
-    # Column order: Name, Record, Week (if present), Points, OMW%
-    headers = ['Name', 'Record']
+    # Column order: Name, Record, Points, Week (if present), OMW%
+    headers = ['Name', 'Record', 'Points']
     if has_week:
         headers.append('Week')
-    headers.append('Points')
     headers.append('OMW%')
 
     for col, header in enumerate(headers, 1):
@@ -797,18 +796,18 @@ def write_excel(standings: List[Dict], output_path: str):
         cell.alignment = Alignment(horizontal="center", vertical="center")
         col_idx += 1
 
+        # Points (centered)
+        cell = ws.cell(row=row_idx, column=col_idx)
+        cell.value = entry.get('points', 0)
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        col_idx += 1
+
         if has_week:
             # Week (centered)
             cell = ws.cell(row=row_idx, column=col_idx)
             cell.value = entry.get('week', '')
             cell.alignment = Alignment(horizontal="center", vertical="center")
             col_idx += 1
-
-        # Points (centered)
-        cell = ws.cell(row=row_idx, column=col_idx)
-        cell.value = entry.get('points', 0)
-        cell.alignment = Alignment(horizontal="center", vertical="center")
-        col_idx += 1
 
         # OMW% (centered)
         cell = ws.cell(row=row_idx, column=col_idx)
@@ -819,8 +818,8 @@ def write_excel(standings: List[Dict], output_path: str):
     ws.column_dimensions['A'].width = 20  # Name
     ws.column_dimensions['B'].width = 12  # Record
     if has_week:
-        ws.column_dimensions['C'].width = 12  # Week
-        ws.column_dimensions['D'].width = 10  # Points
+        ws.column_dimensions['C'].width = 10  # Points
+        ws.column_dimensions['D'].width = 12  # Week
         ws.column_dimensions['E'].width = 10  # OMW%
     else:
         ws.column_dimensions['C'].width = 10  # Points
@@ -840,11 +839,10 @@ def write_csv(standings: List[Dict], output_path: str):
     # Check if week field exists in any entry
     has_week = any('week' in entry for entry in standings)
 
-    # Column order: Name, Record, Week (if present), Points, OMW%
-    headers = ['Name', 'Record']
+    # Column order: Name, Record, Points, Week (if present), OMW%
+    headers = ['Name', 'Record', 'Points']
     if has_week:
         headers.append('Week')
-    headers.append('Points')
     headers.append('OMW%')
 
     with open(output_path, 'w', newline='') as f:
