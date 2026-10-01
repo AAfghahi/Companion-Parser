@@ -50,6 +50,8 @@ KNOWN_PLAYERS = [
     'Nick Caroselli',
     'arash afghahi',
     'Markus Leben',
+    'Aeron K',
+    'Forrest Rinehart',
 ]
 
 try:
