@@ -52,6 +52,8 @@ KNOWN_PLAYERS = [
     'Markus Leben',
     'Aeron K',
     'Forrest Rinehart',
+    'David Ernenwein',
+    'Julien de la Rosa',
 ]
 
 try:
