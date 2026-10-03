@@ -144,8 +144,9 @@ export default function Dashboard() {
   const stats = useMemo(() => ({
     totalEntries: bestStandings.length,
     uniquePlayers: allPlayers.length,
-    weeksTracked: weeks.length
-  }), [bestStandings.length, allPlayers.length, weeks.length]);
+    weeksTracked: weeks.length,
+    stores: new Set(standings.map(s => s.store).filter(Boolean)).size
+  }), [standings, bestStandings.length, allPlayers.length, weeks.length]);
 
   const currentWeek = weeks.length > 0 ? weeks[0] : '';
 
@@ -422,6 +423,7 @@ export default function Dashboard() {
           <p>Total Entries: <span>{stats.totalEntries}</span></p>
           <p>Unique Players: <span>{stats.uniquePlayers}</span></p>
           <p>Weeks Tracked: <span>{stats.weeksTracked}</span></p>
+          <p>Stores: <span>{stats.stores}</span></p>
         </div>
       </div>
 
