@@ -44,6 +44,7 @@ User sees Dashboard (current) or SeasonHistory (past)
 - `week` (text) - week date (M/D/YY format)
 - `gwPercent` (numeric) - game win percentage
 - `omwPercent` (numeric) - opposition match win percentage
+- `store` (text) - store where the event was played (optional; shown as the Store column)
 - `created_at` (timestamp) - auto-created on sync
 
 #### `season_data` table (archived seasons)

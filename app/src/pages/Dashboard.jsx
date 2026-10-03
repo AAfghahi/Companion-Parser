@@ -88,8 +88,12 @@ export default function Dashboard() {
           total: 0,
           count: 0,
           omwTotal: 0,
-          gwTotal: 0
+          gwTotal: 0,
+          stores: []
         };
+      }
+      if (entry.store && !playerStats[entry.name].stores.includes(entry.store)) {
+        playerStats[entry.name].stores.push(entry.store);
       }
       playerStats[entry.name].total += entry.points;
       playerStats[entry.name].count += 1;
@@ -278,22 +282,24 @@ export default function Dashboard() {
               <th>Points</th>
               <th>Record</th>
               <th>OMW%</th>
+              <th>Store</th>
             </tr>
           </thead>
           <tbody>
             {paginatedWeekly.length > 0 ? (
               paginatedWeekly.map(entry => (
-                <tr key={`${entry.name}-${entry.week}`}>
+                <tr key={`${entry.name}-${entry.week}-${entry.store || ''}`}>
                   <td>{entry.rank}</td>
                   <td>{entry.name}</td>
                   <td><strong>{entry.points}</strong></td>
                   <td>{entry.record || '-'}</td>
                   <td>{entry.omwPercent || '-'}</td>
+                  <td>{entry.store || '-'}</td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
+                <td colSpan="6" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
                   No data available
                 </td>
               </tr>
@@ -346,6 +352,7 @@ export default function Dashboard() {
               <th>Tournaments</th>
               <th>Avg Points</th>
               <th>OMW%</th>
+              <th>Store</th>
             </tr>
           </thead>
           <tbody>
@@ -358,11 +365,12 @@ export default function Dashboard() {
                   <td>{player.count}</td>
                   <td>{player.avg}</td>
                   <td>{player.omwPercent || '-'}</td>
+                  <td>{player.stores.length ? player.stores.join(', ') : '-'}</td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="6" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
+                <td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
                   No data available
                 </td>
               </tr>

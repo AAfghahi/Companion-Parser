@@ -44,7 +44,8 @@ export default function SeasonHistory() {
       points: item.points || parseInt(item[2]),
       week: item.week || item[3],
       gwPercent: item.gwPercent || item[4],
-      omwPercent: item.omwPercent || item[5]
+      omwPercent: item.omwPercent || item[5],
+      store: item.store
     }));
 
     if (weekFilter) {
@@ -84,9 +85,13 @@ export default function SeasonHistory() {
       const points = entry.points || parseInt(entry[2]);
       const gwPercent = entry.gwPercent || entry[4];
       const omwPercent = entry.omwPercent || entry[5];
+      const store = entry.store;
 
       if (!playerStats[name]) {
-        playerStats[name] = { name, total: 0, count: 0, gwTotal: 0, omwTotal: 0 };
+        playerStats[name] = { name, total: 0, count: 0, gwTotal: 0, omwTotal: 0, stores: [] };
+      }
+      if (store && !playerStats[name].stores.includes(store)) {
+        playerStats[name].stores.push(store);
       }
       playerStats[name].total += points;
       playerStats[name].count += 1;
@@ -208,22 +213,24 @@ export default function SeasonHistory() {
                     <th>Points</th>
                     <th>Record</th>
                     <th>OMW%</th>
+                    <th>Store</th>
                   </tr>
                 </thead>
                 <tbody>
                   {paginatedWeekly.length > 0 ? (
                     paginatedWeekly.map(entry => (
-                      <tr key={`${entry.name}-${entry.week}`}>
+                      <tr key={`${entry.name}-${entry.week}-${entry.store || ''}`}>
                         <td>{entry.rank}</td>
                         <td>{entry.name}</td>
                         <td><strong>{entry.points}</strong></td>
                         <td>{entry.record || '-'}</td>
                         <td>{entry.omwPercent || '-'}</td>
+                        <td>{entry.store || '-'}</td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
+                      <td colSpan="6" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
                         No data available
                       </td>
                     </tr>
@@ -263,6 +270,7 @@ export default function SeasonHistory() {
                     <th>Tournaments</th>
                     <th>Avg Points</th>
                     <th>OMW%</th>
+                    <th>Store</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -275,11 +283,12 @@ export default function SeasonHistory() {
                         <td>{player.count}</td>
                         <td>{player.avg}</td>
                         <td>{player.omwPercent || '-'}</td>
+                        <td>{player.stores.length ? player.stores.join(', ') : '-'}</td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="6" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
+                      <td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
                         No data available
                       </td>
                     </tr>
