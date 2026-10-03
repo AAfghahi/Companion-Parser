@@ -28,9 +28,11 @@ export default function SeasonHistory() {
   const [loading, setLoading] = useState(false);
 
   // Normalize rows (object or legacy array format), then keep only each
-  // player's best score per week
+  // player's best score per week. Legacy Google Sheets data starts with a
+  // header row; Supabase rows don't, so drop rows without a real name rather
+  // than always skipping the first row.
   const bestSeasonData = useMemo(() => keepBestScores(
-    seasonData.slice(1).map(item => ({
+    seasonData.map(item => ({
       name: item.name || item[0],
       record: item.record || item[1],
       points: item.points || parseInt(item[2]),
@@ -38,20 +40,20 @@ export default function SeasonHistory() {
       gwPercent: item.gwPercent || item[4],
       omwPercent: item.omwPercent || item[5],
       store: item.store
-    }))
+    })).filter(item => item.name && String(item.name).toLowerCase() !== 'name')
   ), [seasonData]);
 
   const weeks = useMemo(() => {
-    if (!seasonData.length) return [];
-    const uniqueWeeks = [...new Set(seasonData.slice(1).map(s => s.week || s[3]))];
+    if (!bestSeasonData.length) return [];
+    const uniqueWeeks = [...new Set(bestSeasonData.map(s => s.week))];
     return uniqueWeeks.sort().reverse();
-  }, [seasonData]);
+  }, [bestSeasonData]);
 
   const allPlayers = useMemo(() => {
-    if (!seasonData.length) return [];
-    const players = [...new Set(seasonData.slice(1).map(s => s.name || s[0]))];
+    if (!bestSeasonData.length) return [];
+    const players = [...new Set(bestSeasonData.map(s => s.name))];
     return players.sort();
-  }, [seasonData]);
+  }, [bestSeasonData]);
 
   const filteredWeeklyData = useMemo(() => {
     let data = [...bestSeasonData];
