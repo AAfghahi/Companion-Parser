@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useStandings } from '../context/StandingsContext';
 import '../styles/pages.css';
 import { addStoreVisit, getFavoriteStore } from '../utils/favoriteStore';
+import { keepBestScores } from '../utils/bestScores';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -26,6 +27,20 @@ export default function SeasonHistory() {
   const [leaderboardPage, setLeaderboardPage] = useState(1);
   const [loading, setLoading] = useState(false);
 
+  // Normalize rows (object or legacy array format), then keep only each
+  // player's best score per week
+  const bestSeasonData = useMemo(() => keepBestScores(
+    seasonData.slice(1).map(item => ({
+      name: item.name || item[0],
+      record: item.record || item[1],
+      points: item.points || parseInt(item[2]),
+      week: item.week || item[3],
+      gwPercent: item.gwPercent || item[4],
+      omwPercent: item.omwPercent || item[5],
+      store: item.store
+    }))
+  ), [seasonData]);
+
   const weeks = useMemo(() => {
     if (!seasonData.length) return [];
     const uniqueWeeks = [...new Set(seasonData.slice(1).map(s => s.week || s[3]))];
@@ -39,15 +54,7 @@ export default function SeasonHistory() {
   }, [seasonData]);
 
   const filteredWeeklyData = useMemo(() => {
-    let data = seasonData.slice(1).map(item => ({
-      name: item.name || item[0],
-      record: item.record || item[1],
-      points: item.points || parseInt(item[2]),
-      week: item.week || item[3],
-      gwPercent: item.gwPercent || item[4],
-      omwPercent: item.omwPercent || item[5],
-      store: item.store
-    }));
+    let data = [...bestSeasonData];
 
     if (weekFilter) {
       data = data.filter(s => s.week === weekFilter);
@@ -71,7 +78,7 @@ export default function SeasonHistory() {
     }
 
     return data;
-  }, [seasonData, weekFilter, searchPlayer]);
+  }, [bestSeasonData, weekFilter, searchPlayer]);
 
   const paginatedWeekly = useMemo(() => {
     const start = (weeklyPage - 1) * ITEMS_PER_PAGE;
@@ -81,17 +88,13 @@ export default function SeasonHistory() {
   const leaderboardData = useMemo(() => {
     const playerStats = {};
 
-    seasonData.slice(1).forEach(entry => {
-      const name = entry.name || entry[0];
-      const points = entry.points || parseInt(entry[2]);
-      const gwPercent = entry.gwPercent || entry[4];
-      const omwPercent = entry.omwPercent || entry[5];
-      const store = entry.store;
+    bestSeasonData.forEach(entry => {
+      const { name, points, gwPercent, omwPercent, store } = entry;
 
       if (!playerStats[name]) {
         playerStats[name] = { name, total: 0, count: 0, gwTotal: 0, omwTotal: 0, stores: {} };
       }
-      addStoreVisit(playerStats[name].stores, store, formatWeekDate(entry.week || entry[3]));
+      addStoreVisit(playerStats[name].stores, store, formatWeekDate(entry.week));
       playerStats[name].total += points;
       playerStats[name].count += 1;
       if (gwPercent) {
@@ -118,7 +121,7 @@ export default function SeasonHistory() {
       });
 
     return leaderboard.map((player, idx) => ({ ...player, rank: idx + 1 }));
-  }, [seasonData]);
+  }, [bestSeasonData]);
 
   const filteredLeaderboard = useMemo(() => {
     if (!searchPlayer) return leaderboardData;

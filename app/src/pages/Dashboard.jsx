@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useStandings } from '../context/StandingsContext';
 import '../styles/pages.css';
 import { addStoreVisit, getFavoriteStore } from '../utils/favoriteStore';
+import { keepBestScores } from '../utils/bestScores';
 
 const DISCORD_WEBHOOK = import.meta.env.VITE_DISCORD_WEBHOOK_URL || '';
 const ITEMS_PER_PAGE = 10;
@@ -35,6 +36,9 @@ export default function Dashboard() {
     loadStandings();
   }, [loadStandings]);
 
+  // Only a player's best score per week counts
+  const bestStandings = useMemo(() => keepBestScores(standings), [standings]);
+
   const weeks = useMemo(() => {
     if (!standings.length) return [];
     const uniqueWeeks = [...new Set(standings.map(s => s.week))];
@@ -48,7 +52,7 @@ export default function Dashboard() {
   }, [standings]);
 
   const filteredWeeklyData = useMemo(() => {
-    let data = standings;
+    let data = [...bestStandings];
 
     if (weekFilter) {
       data = data.filter(s => s.week === weekFilter);
@@ -72,7 +76,7 @@ export default function Dashboard() {
     }
 
     return data;
-  }, [standings, weekFilter, searchPlayer]);
+  }, [bestStandings, weekFilter, searchPlayer]);
 
   const paginatedWeekly = useMemo(() => {
     const start = (weeklyPage - 1) * ITEMS_PER_PAGE;
@@ -82,7 +86,7 @@ export default function Dashboard() {
   const leaderboardData = useMemo(() => {
     const playerStats = {};
 
-    standings.forEach(entry => {
+    bestStandings.forEach(entry => {
       if (!playerStats[entry.name]) {
         playerStats[entry.name] = {
           name: entry.name,
@@ -123,7 +127,7 @@ export default function Dashboard() {
       ...player,
       rank: idx + 1
     }));
-  }, [standings]);
+  }, [bestStandings]);
 
   const filteredLeaderboard = useMemo(() => {
     if (!searchPlayer) return leaderboardData;
@@ -138,10 +142,10 @@ export default function Dashboard() {
   }, [filteredLeaderboard, leaderboardPage]);
 
   const stats = useMemo(() => ({
-    totalEntries: standings.length,
+    totalEntries: bestStandings.length,
     uniquePlayers: allPlayers.length,
     weeksTracked: weeks.length
-  }), [standings.length, allPlayers.length, weeks.length]);
+  }), [bestStandings.length, allPlayers.length, weeks.length]);
 
   const currentWeek = weeks.length > 0 ? weeks[0] : '';
 
