@@ -66,6 +66,7 @@ except ImportError:
 try:
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment
+    from openpyxl.utils import get_column_letter
 except ImportError:
     print("Error: openpyxl not installed. Run: pip install openpyxl")
     sys.exit(1)
@@ -758,6 +759,13 @@ def add_week_to_entries(standings: List[Dict], week_date: str) -> List[Dict]:
     return standings
 
 
+def add_store_to_entries(standings: List[Dict], store: str) -> List[Dict]:
+    """Add store field to all entries (every player in a screenshot shares one store)."""
+    for entry in standings:
+        entry['store'] = store
+    return standings
+
+
 def write_excel(standings: List[Dict], output_path: str):
     """Write standings to Excel file."""
     if not standings:
@@ -771,11 +779,15 @@ def write_excel(standings: List[Dict], output_path: str):
     # Check if week field exists in any entry
     has_week = any('week' in entry for entry in standings)
 
-    # Column order: Name, Record, Points, Week (if present), OMW%
+    has_store = any('store' in entry for entry in standings)
+
+    # Column order: Name, Record, Points, Week (if present), OMW%, Store (if present)
     headers = ['Name', 'Record', 'Points']
     if has_week:
         headers.append('Week')
     headers.append('OMW%')
+    if has_store:
+        headers.append('Store')
 
     for col, header in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col)
@@ -815,17 +827,18 @@ def write_excel(standings: List[Dict], output_path: str):
         cell = ws.cell(row=row_idx, column=col_idx)
         cell.value = entry.get('omw', '')
         cell.alignment = Alignment(horizontal="center", vertical="center")
+        col_idx += 1
+
+        if has_store:
+            # Store (left-aligned)
+            cell = ws.cell(row=row_idx, column=col_idx)
+            cell.value = entry.get('store', '')
+            cell.alignment = Alignment(horizontal="left", vertical="center")
 
     # Auto-adjust column widths
-    ws.column_dimensions['A'].width = 20  # Name
-    ws.column_dimensions['B'].width = 12  # Record
-    if has_week:
-        ws.column_dimensions['C'].width = 10  # Points
-        ws.column_dimensions['D'].width = 12  # Week
-        ws.column_dimensions['E'].width = 10  # OMW%
-    else:
-        ws.column_dimensions['C'].width = 10  # Points
-        ws.column_dimensions['D'].width = 10  # OMW%
+    widths = {'Name': 20, 'Record': 12, 'Points': 10, 'Week': 12, 'OMW%': 10, 'Store': 24}
+    for col, header in enumerate(headers, 1):
+        ws.column_dimensions[get_column_letter(col)].width = widths[header]
 
     wb.save(output_path)
     print(f"✓ Excel written: {output_path}")
@@ -841,11 +854,15 @@ def write_csv(standings: List[Dict], output_path: str):
     # Check if week field exists in any entry
     has_week = any('week' in entry for entry in standings)
 
-    # Column order: Name, Record, Points, Week (if present), OMW%
+    has_store = any('store' in entry for entry in standings)
+
+    # Column order: Name, Record, Points, Week (if present), OMW%, Store (if present)
     headers = ['Name', 'Record', 'Points']
     if has_week:
         headers.append('Week')
     headers.append('OMW%')
+    if has_store:
+        headers.append('Store')
 
     with open(output_path, 'w', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=headers)
@@ -860,6 +877,8 @@ def write_csv(standings: List[Dict], output_path: str):
             }
             if has_week:
                 row['Week'] = entry.get('week', '')
+            if has_store:
+                row['Store'] = entry.get('store', '')
             writer.writerow(row)
 
     print(f"✓ CSV written: {output_path}")
@@ -878,11 +897,13 @@ Examples:
   python screenshot_extract_v3.py img1.png img2.png -d 9/21/26 --debug
   python screenshot_extract_v3.py img1.png img2.png -f csv
   python screenshot_extract_v3.py img1.png img2.png -o standings.csv -f csv
+  python screenshot_extract_v3.py screenshot.png -s "Store Name" -f csv
         '''
     )
     parser.add_argument('images', nargs='+', help='Screenshot image file(s)')
     parser.add_argument('-o', '--output', help='Output file (default: standings_M_D_YY.xlsx or .csv with date)')
     parser.add_argument('-d', '--date', help='Week start date in M/D/YY format (default: current week Monday)')
+    parser.add_argument('-s', '--store', help='Store name to attach to every player (added as the last column)')
     parser.add_argument('-f', '--format', choices=['xlsx', 'csv'], default='xlsx', help='Output format (default: xlsx)')
     parser.add_argument('--debug', action='store_true', help='Show debug output')
 
@@ -930,6 +951,10 @@ Examples:
 
     # Add week field to all entries
     merged_standings = add_week_to_entries(merged_standings, week_date)
+
+    # Add store field to all entries if provided
+    if args.store:
+        merged_standings = add_store_to_entries(merged_standings, args.store)
 
     # Recover unknown names using known player list
     all_extracted_names = []
