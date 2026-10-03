@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useStandings } from '../context/StandingsContext';
 import '../styles/pages.css';
+import { addStoreVisit, getFavoriteStore } from '../utils/favoriteStore';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -88,11 +89,9 @@ export default function SeasonHistory() {
       const store = entry.store;
 
       if (!playerStats[name]) {
-        playerStats[name] = { name, total: 0, count: 0, gwTotal: 0, omwTotal: 0, stores: [] };
+        playerStats[name] = { name, total: 0, count: 0, gwTotal: 0, omwTotal: 0, stores: {} };
       }
-      if (store && !playerStats[name].stores.includes(store)) {
-        playerStats[name].stores.push(store);
-      }
+      addStoreVisit(playerStats[name].stores, store, formatWeekDate(entry.week || entry[3]));
       playerStats[name].total += points;
       playerStats[name].count += 1;
       if (gwPercent) {
@@ -108,7 +107,8 @@ export default function SeasonHistory() {
         ...player,
         avg: (player.total / player.count).toFixed(1),
         gwPercent: player.gwTotal > 0 ? (player.gwTotal / player.count).toFixed(1) : '-',
-        omwPercent: player.omwTotal > 0 ? (player.omwTotal / player.count).toFixed(1) : '-'
+        omwPercent: player.omwTotal > 0 ? (player.omwTotal / player.count).toFixed(1) : '-',
+        favoriteStore: getFavoriteStore(player.stores)
       }))
       .sort((a, b) => {
         if (b.total !== a.total) return b.total - a.total;
@@ -270,7 +270,7 @@ export default function SeasonHistory() {
                     <th>Tournaments</th>
                     <th>Avg Points</th>
                     <th>OMW%</th>
-                    <th>Store</th>
+                    <th>Favorite Store</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -283,7 +283,7 @@ export default function SeasonHistory() {
                         <td>{player.count}</td>
                         <td>{player.avg}</td>
                         <td>{player.omwPercent || '-'}</td>
-                        <td>{player.stores.length ? player.stores.join(', ') : '-'}</td>
+                        <td>{player.favoriteStore || '-'}</td>
                       </tr>
                     ))
                   ) : (

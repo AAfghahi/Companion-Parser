@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useStandings } from '../context/StandingsContext';
 import '../styles/pages.css';
+import { addStoreVisit, getFavoriteStore } from '../utils/favoriteStore';
 
 const DISCORD_WEBHOOK = import.meta.env.VITE_DISCORD_WEBHOOK_URL || '';
 const ITEMS_PER_PAGE = 10;
@@ -89,12 +90,10 @@ export default function Dashboard() {
           count: 0,
           omwTotal: 0,
           gwTotal: 0,
-          stores: []
+          stores: {}
         };
       }
-      if (entry.store && !playerStats[entry.name].stores.includes(entry.store)) {
-        playerStats[entry.name].stores.push(entry.store);
-      }
+      addStoreVisit(playerStats[entry.name].stores, entry.store, formatWeekDate(entry.week));
       playerStats[entry.name].total += entry.points;
       playerStats[entry.name].count += 1;
       if (entry.omwPercent) {
@@ -110,7 +109,8 @@ export default function Dashboard() {
         ...player,
         avg: (player.total / player.count).toFixed(1),
         gwPercent: player.gwTotal > 0 ? (player.gwTotal / player.count).toFixed(1) : '-',
-        omwPercent: player.omwTotal > 0 ? (player.omwTotal / player.count).toFixed(1) : '-'
+        omwPercent: player.omwTotal > 0 ? (player.omwTotal / player.count).toFixed(1) : '-',
+        favoriteStore: getFavoriteStore(player.stores)
       }))
       .sort((a, b) => {
         if (b.total !== a.total) return b.total - a.total;
@@ -352,7 +352,7 @@ export default function Dashboard() {
               <th>Tournaments</th>
               <th>Avg Points</th>
               <th>OMW%</th>
-              <th>Store</th>
+              <th>Favorite Store</th>
             </tr>
           </thead>
           <tbody>
@@ -365,7 +365,7 @@ export default function Dashboard() {
                   <td>{player.count}</td>
                   <td>{player.avg}</td>
                   <td>{player.omwPercent || '-'}</td>
-                  <td>{player.stores.length ? player.stores.join(', ') : '-'}</td>
+                  <td>{player.favoriteStore || '-'}</td>
                 </tr>
               ))
             ) : (
