@@ -286,7 +286,7 @@ export default function Dashboard() {
         </button>{' '}
         and I will make sure the results here are accurate. (i.e. if you and your opponent
         draw and would both be 1-1-1, or if you concede after the game to ensure both players
-        get credit).
+        get store credit).
       </div>
 
       <div className="table-container">
