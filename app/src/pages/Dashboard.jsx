@@ -278,6 +278,17 @@ export default function Dashboard() {
         </button>
       </div>
 
+      <div className="results-note">
+        If you and your opponent agree on a result that is not representative of the actual
+        results of the game, please fill out a{' '}
+        <button type="button" className="link-button" onClick={handleReportOpen}>
+          result discrepancy form
+        </button>{' '}
+        and I will make sure the results here are accurate. (i.e. if you and your opponent
+        draw and would both be 1-1-1, or if you concede after the game to ensure both players
+        get credit).
+      </div>
+
       <div className="table-container">
         <table>
           <thead>
