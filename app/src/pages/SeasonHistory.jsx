@@ -31,16 +31,23 @@ export default function SeasonHistory() {
   // player's best score per week. Legacy Google Sheets data starts with a
   // header row; Supabase rows don't, so drop rows without a real name rather
   // than always skipping the first row.
+  // Points are coerced to a number (0 if missing) so a 0-point row doesn't
+  // become NaN, which would show as "NaN" and break the leaderboard sort.
   const bestSeasonData = useMemo(() => keepBestScores(
-    seasonData.map(item => ({
-      name: item.name || item[0],
-      record: item.record || item[1],
-      points: item.points || parseInt(item[2]),
-      week: item.week || item[3],
-      gwPercent: item.gwPercent || item[4],
-      omwPercent: item.omwPercent || item[5],
-      store: item.store
-    })).filter(item => item.name && String(item.name).toLowerCase() !== 'name')
+    seasonData.map(item => {
+      const row = Array.isArray(item)
+        ? { name: item[0], record: item[1], points: item[2], week: item[3], gwPercent: item[4], omwPercent: item[5] }
+        : item;
+      return {
+        name: row.name,
+        record: row.record,
+        points: Number(row.points) || 0,
+        week: row.week,
+        gwPercent: row.gwPercent,
+        omwPercent: row.omwPercent,
+        store: row.store
+      };
+    }).filter(item => item.name && String(item.name).toLowerCase() !== 'name')
   ), [seasonData]);
 
   const weeks = useMemo(() => {
