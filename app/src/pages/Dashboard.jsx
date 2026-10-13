@@ -17,6 +17,19 @@ const formatWeekDate = (dateStr) => {
   return str;
 };
 
+// Sortable timestamp for a week value (ISO timestamp or M/D/YY string), so
+// weeks sort by real date rather than as text ("10/12" vs "10/5" vs "9/28").
+const weekTime = (dateStr) => {
+  const str = String(dateStr);
+  const mdy = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (mdy) {
+    const year = mdy[3].length === 2 ? 2000 + Number(mdy[3]) : Number(mdy[3]);
+    return new Date(year, Number(mdy[1]) - 1, Number(mdy[2])).getTime();
+  }
+  const time = new Date(str).getTime();
+  return Number.isNaN(time) ? 0 : time;
+};
+
 export default function Dashboard() {
   const { standings, loading, loadStandings } = useStandings();
   const [weekFilter, setWeekFilter] = useState('');
@@ -42,7 +55,8 @@ export default function Dashboard() {
   const weeks = useMemo(() => {
     if (!standings.length) return [];
     const uniqueWeeks = [...new Set(standings.map(s => s.week))];
-    return uniqueWeeks.sort().reverse();
+    // Newest first, so the dropdown defaults to the latest week
+    return uniqueWeeks.sort((a, b) => weekTime(b) - weekTime(a));
   }, [standings]);
 
   const allPlayers = useMemo(() => {
