@@ -1,33 +1,121 @@
+import 'temporal-polyfill/global';
+import { useEffect, useState } from 'react';
+import { ScheduleXCalendar, useCalendarApp } from '@schedule-x/react';
+import {
+  createViewList,
+  createViewMonthAgenda,
+  createViewMonthGrid,
+  createViewWeek
+} from '@schedule-x/calendar';
+import { createEventRecurrencePlugin } from '@schedule-x/event-recurrence';
+import { createEventModalPlugin } from '@schedule-x/event-modal';
+import '@schedule-x/theme-default/dist/index.css';
 import '../styles/pages.css';
 
+const TIMEZONE = 'America/Denver';
+// Events don't have a published end time; assume a typical 3-hour event.
+const EVENT_HOURS = 3;
+// Recurring events are generated starting from the first matching weekday on
+// or after this date.
+const SERIES_START = '2026-01-01';
+
+// day: ISO weekday (1 = Monday … 7 = Sunday), time: 24h HH:MM
+const WEEKLY_EVENTS = [
+  { region: 'metro', day: 1, time: '19:00', store: 'Lovo Games', location: 'Parker' },
+  { region: 'metro', day: 2, time: '19:00', store: 'Enchanted Grounds', location: 'Highlands Ranch' },
+  { region: 'metro', day: 3, time: '19:00', store: "All C's", location: 'Aurora' },
+  { region: 'metro', day: 3, time: '19:00', store: 'MeH Games', location: 'Greenwood Village' },
+  { region: 'metro', day: 4, time: '18:30', store: 'Mythic Games', location: 'Littleton' },
+  { region: 'metro', day: 7, time: '13:00', store: 'Denver Central Games', location: 'Denver' },
+  { region: 'state', day: 1, time: '18:30', store: 'Card Cosmos', location: 'Colorado Springs' },
+  { region: 'state', day: 3, time: '19:00', store: 'Grandmaster Games', location: 'Boulder' },
+  { region: 'state', day: 4, time: '18:00', store: 'Mountain Table Top Gaming', location: 'Eagle' },
+  { region: 'state', day: 5, time: '18:00', store: 'Foxfire Games', location: 'Fort Collins' }
+];
+
+const REGIONS = {
+  metro: {
+    colorName: 'metro',
+    label: 'Metro Denver',
+    lightColors: { main: '#6366f1', container: '#e0e7ff', onContainer: '#1e1b4b' },
+    darkColors: { main: '#818cf8', container: '#312e81', onContainer: '#e0e7ff' }
+  },
+  state: {
+    colorName: 'state',
+    label: 'Around the State',
+    lightColors: { main: '#059669', container: '#d1fae5', onContainer: '#064e3b' },
+    darkColors: { main: '#34d399', container: '#064e3b', onContainer: '#d1fae5' }
+  }
+};
+
+const DAY_NAMES = ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const RRULE_DAYS = ['', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
+
+const formatTime = (time) => {
+  const [h, m] = time.split(':').map(Number);
+  const suffix = h >= 12 ? 'pm' : 'am';
+  const hour = h % 12 || 12;
+  return m ? `${hour}:${String(m).padStart(2, '0')}${suffix}` : `${hour}${suffix}`;
+};
+
+const toCalendarEvent = (event, idx) => {
+  const seriesStart = Temporal.PlainDate.from(SERIES_START);
+  const firstDate = seriesStart.add({ days: (event.day - seriesStart.dayOfWeek + 7) % 7 });
+  const start = firstDate
+    .toZonedDateTime({ timeZone: TIMEZONE, plainTime: Temporal.PlainTime.from(event.time) });
+
+  return {
+    id: String(idx + 1),
+    title: event.store,
+    location: `${event.store} (${event.location})`,
+    description: `Every ${DAY_NAMES[event.day]} at ${formatTime(event.time)}`,
+    calendarId: event.region,
+    start,
+    end: start.add({ hours: EVENT_HOURS }),
+    rrule: `FREQ=WEEKLY;BYDAY=${RRULE_DAYS[event.day]}`
+  };
+};
+
+const prefersDark = () =>
+  typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+
 export default function Calendar() {
-  const events = [
-    {
-      name: 'Metro Denver Tuesday Pauper',
-      location: 'Denver, CO',
-      schedule: 'Every Tuesday at 6:00 PM'
-    },
-    {
-      name: 'Fort Collins Thursday Pauper',
-      location: 'Fort Collins, CO',
-      schedule: 'Every Thursday at 6:00 PM'
-    },
-    {
-      name: 'Boulder Saturday Pauper',
-      location: 'Boulder, CO',
-      schedule: 'Every Saturday at 1:00 PM'
-    },
-    {
-      name: 'Springs Wednesday Pauper',
-      location: 'Colorado Springs, CO',
-      schedule: 'Every Wednesday at 6:00 PM'
-    },
-    {
-      name: 'Western Slope Friday Pauper',
-      location: 'Grand Junction, CO',
-      schedule: 'Every Friday at 5:00 PM'
+  const [isDark, setIsDark] = useState(prefersDark);
+
+  const calendarApp = useCalendarApp({
+    views: [createViewMonthGrid(), createViewWeek(), createViewList(), createViewMonthAgenda()],
+    defaultView: 'month-grid',
+    timezone: TIMEZONE,
+    firstDayOfWeek: 1,
+    isDark,
+    calendars: REGIONS,
+    dayBoundaries: { start: '10:00', end: '23:00' },
+    events: WEEKLY_EVENTS.map(toCalendarEvent),
+    plugins: [createEventRecurrencePlugin(), createEventModalPlugin()],
+    callbacks: {
+      // Decide compact (phone) mode from the window width. Schedule-X's default
+      // measures its own element, which can read too narrow on first render
+      // and leave desktop stuck in the compact list view.
+      isCalendarSmall: () => window.innerWidth < 700
     }
-  ];
+  });
+
+  // Follow the OS light/dark setting, like the rest of the site
+  useEffect(() => {
+    const media = window.matchMedia?.('(prefers-color-scheme: dark)');
+    if (!media) return;
+    const onChange = (e) => setIsDark(e.matches);
+    media.addEventListener('change', onChange);
+    return () => media.removeEventListener('change', onChange);
+  }, []);
+
+  useEffect(() => {
+    calendarApp?.setTheme(isDark ? 'dark' : 'light');
+  }, [calendarApp, isDark]);
+
+  const byRegion = (region) => WEEKLY_EVENTS
+    .filter(e => e.region === region)
+    .sort((a, b) => a.day - b.day || a.time.localeCompare(b.time));
 
   return (
     <>
@@ -38,20 +126,37 @@ export default function Calendar() {
         </div>
       </header>
 
-      <div className="container">
-        <h2>Upcoming Events</h2>
+      <div className="container calendar-page">
+        <div className="calendar-legend">
+          {Object.values(REGIONS).map(region => (
+            <span key={region.colorName} className="calendar-legend-item">
+              <span
+                className="calendar-legend-swatch"
+                style={{ background: (isDark ? region.darkColors : region.lightColors).main }}
+              />
+              {region.label}
+            </span>
+          ))}
+        </div>
+
+        <div className="calendar-wrapper">
+          <ScheduleXCalendar calendarApp={calendarApp} />
+        </div>
+
+        <h2>Weekly Events</h2>
         <div className="content">
-          {events.map((event, idx) => (
-            <div key={idx} className="stat-card">
+          {Object.entries(REGIONS).map(([key, region]) => (
+            <div key={key} className="stat-card">
               <h3 style={{ margin: '0 0 10px 0', color: 'var(--text-primary)' }}>
-                {event.name}
+                {region.label}
               </h3>
-              <p style={{ margin: '5px 0' }}>
-                <strong>Location:</strong> {event.location}
-              </p>
-              <p style={{ margin: '5px 0', color: 'var(--text-secondary)' }}>
-                {event.schedule}
-              </p>
+              {byRegion(key).map(event => (
+                <p key={event.store} style={{ margin: '5px 0' }}>
+                  <strong>{DAY_NAMES[event.day].slice(0, 3)}, {formatTime(event.time)}</strong>
+                  {' '}@ {event.store}{' '}
+                  <span style={{ color: 'var(--text-secondary)' }}>({event.location})</span>
+                </p>
+              ))}
             </div>
           ))}
         </div>

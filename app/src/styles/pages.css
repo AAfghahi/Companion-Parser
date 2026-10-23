@@ -400,3 +400,49 @@ tr:hover {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+/* Calendar page (Schedule-X) */
+.calendar-page {
+  width: 100%;
+}
+
+.calendar-wrapper {
+  text-align: left;
+}
+
+.calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 20px 0 12px;
+  color: var(--text-secondary);
+}
+
+.calendar-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.calendar-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.calendar-wrapper .sx-react-calendar-wrapper {
+  width: 100%;
+  height: 820px;
+  max-height: 90vh;
+}
+
+/* Undo the site-wide page <header> banner styles on Schedule-X's toolbar */
+.calendar-wrapper header.sx__calendar-header {
+  width: auto;
+  margin: 0;
+  padding: 16px;
+}
+
+.calendar-wrapper .sx__calendar-wrapper {
+  border-radius: 8px;
+}
