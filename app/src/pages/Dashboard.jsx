@@ -4,7 +4,6 @@ import '../styles/pages.css';
 import { addStoreVisit, getFavoriteStore } from '../utils/favoriteStore';
 import { keepBestScores } from '../utils/bestScores';
 
-const DISCORD_WEBHOOK = import.meta.env.VITE_DISCORD_WEBHOOK_URL || '';
 const ITEMS_PER_PAGE = 10;
 
 const formatWeekDate = (dateStr) => {
@@ -197,19 +196,20 @@ export default function Dashboard() {
     e.preventDefault();
 
     try {
-      const message = {
-        content: `**Score Discrepancy Report**\n` +
-                `Player: ${reportData.playerName}\n` +
-                `Week: ${reportData.week}\n` +
-                `Reported Score: ${reportData.reportedScore}\n` +
-                `Expected Score: ${reportData.expectedScore}`
-      };
-
-      await fetch(DISCORD_WEBHOOK, {
+      // Sent via our API so the Discord webhook URL never reaches the browser
+      const response = await fetch('/api/report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(message)
+        body: JSON.stringify(reportData)
       });
+
+      if (response.status === 503) {
+        alert('Reporting is temporarily unavailable. Please reach out on Discord instead.');
+        return;
+      }
+      if (!response.ok) {
+        throw new Error(`Report failed with status ${response.status}`);
+      }
 
       setReportSuccess(true);
       setTimeout(() => {

@@ -64,7 +64,6 @@ User sees Dashboard (current) or SeasonHistory (past)
 ```
 VITE_SUPABASE_URL=https://rdkbhobqosqhtjaxszcd.supabase.co
 VITE_SUPABASE_ANON_KEY=sb_publishable_KkxLEwCBrTxDgwqg4pz9Ig_LOk3Rf-R
-VITE_DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
 VITE_CACHE_DURATION_MS=28800000
 ```
 
@@ -72,9 +71,14 @@ VITE_CACHE_DURATION_MS=28800000
 ```
 VITE_SUPABASE_URL=https://rdkbhobqosqhtjaxszcd.supabase.co
 VITE_SUPABASE_ANON_KEY=sb_publishable_KkxLEwCBrTxDgwqg4pz9Ig_LOk3Rf-R
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
 ```
 
 The Vercel API reads these variables to authenticate with Supabase.
+
+`DISCORD_WEBHOOK_URL` is read only by `/api/report` and must **not** have a `VITE_` prefix:
+Vite inlines every `VITE_*` variable into the public JS bundle, which is how a previous
+webhook leaked. If it is unset, the report form shows "reporting unavailable".
 
 ### Database Configuration
 
@@ -128,7 +132,7 @@ Uses Supabase client to query tables directly. Environment variables required.
 **Dashboard** (`/`) - Current season
 - Weekly scores with week filter and player search (columns: Rank, Player, Points, GW%, Record, OMW%)
 - Leaderboard with total points, tournaments, average, GW%, and OMW%
-- Report discrepancy modal (sends to Discord webhook)
+- Report discrepancy modal (POSTs to `/api/report`, which forwards to Discord)
 - Caches data for 8 hours
 - Tiebreaker order: Points → GW% → OMW%
 
@@ -198,6 +202,7 @@ Environment variables from Vercel settings automatically available to API.
 ├── .gitignore                   # node_modules, .env.local
 ├── api/
 │   ├── standings.js             # Main API endpoint (Supabase queries)
+│   ├── report.js                # Discrepancy reports → Discord (server-side webhook)
 │   └── archive-season.js        # Season archival (not currently used)
 ├── app/
 │   ├── package.json             # Frontend deps (React, Vite, etc.)
@@ -345,7 +350,7 @@ git push origin main
 - `.env.local` contains secrets → git ignored
 - Supabase anon key is public (used in browser)
 - RLS policies restrict access (reads only, writes blocked)
-- Discord webhook URL is public (but read-only)
+- Discord webhook URL is a secret: server-side `DISCORD_WEBHOOK_URL` only, never `VITE_*` or committed
 - Service role key stored in Vercel (not in git)
 
 ## Future Improvements
